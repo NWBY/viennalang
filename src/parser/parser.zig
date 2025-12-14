@@ -57,4 +57,32 @@ pub const Parser = struct {
 
         return expr;
     }
+
+    fn parseStringLiteral(self: *Parser) !*ast.Expr {
+        const expr = try self.allocator.create(ast.Expr);
+
+        expr.* = ast.Expr{
+            .string_literal = ast.StringLiteral{
+                .value = self.current_token.lexeme,
+            },
+        };
+
+        self.nextToken();
+        return expr;
+    }
+
+    fn parseBooleanLiteral(self: *Parser) !*ast.Expr {
+        const value = self.currentTokenIs(TokenType.TRUE);
+
+        const expr = try self.allocator.create(ast.Expr);
+
+        expr.* = ast.Expr{
+            .bool_literal = ast.BoolLiteral{
+                .value = value,
+            },
+        };
+
+        self.nextToken();
+        return expr;
+    }
 };
