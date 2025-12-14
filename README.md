@@ -2,7 +2,7 @@
 
 Vienna is an experimental programming language built in Zig.
 
-Below is an example of the language showcasing it's features and syntax:
+Below is an example of the language showcasing it's proposed features and syntax:
 
 ```
 // Constants
