@@ -37,4 +37,24 @@ pub const Parser = struct {
     fn peekTokenIs(self: *Parser, token_type: TokenType) bool {
         return self.peek_token.type == token_type;
     }
+
+    fn parseIntegerLiteral(self: *Parser) !*ast.Expr {
+        // Parse the string to an integer
+        const value = try std.fmt.parseInt(i64, self.current_token.lexeme, 10);
+
+        // Allocate memory for the expression node
+        const expr = try self.allocator.create(ast.Expr);
+
+        // Set the expression to be an integer literal
+        expr.* = ast.Expr{
+            .int_literal = ast.IntLiteral{
+                .value = value,
+            },
+        };
+
+        // Move to next token
+        self.nextToken();
+
+        return expr;
+    }
 };
