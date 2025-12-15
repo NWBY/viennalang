@@ -2,6 +2,7 @@ const std = @import("std");
 const Lexer = @import("../lexer/lexer.zig").Lexer;
 const Token = @import("../lexer/token.zig").Token;
 const TokenType = @import("../lexer/token.zig").TokenType;
+const precedence_file = @import("precendence.zig");
 const ast = @import("ast.zig");
 
 pub const Parser = struct {
@@ -40,7 +41,7 @@ pub const Parser = struct {
 
     // Parse entry point
     pub fn parseExpression(self: *Parser) !*ast.Expr {
-        return try self.parsePrimaryExpression();
+        return try self.parseExpressionWithPrecedence(precedence_file.Precedence.LOWEST);
     }
 
     // Parse primary expressions (literals)
@@ -56,6 +57,36 @@ pub const Parser = struct {
                 return error.UnexpectedToken;
             },
         }
+    }
+
+    fn parseExpressionWithPrecedence(self: *Parser, precedence: precedence_file.Precedence) !*ast.Expr {
+        // Parse left side (a number, identifier, etc.)
+        var left = try self.parsePrimaryExpression();
+
+        // While we have an operator with higher precedence
+        while (@intFromEnum(precedence_file.getTokenPrecedence(self.current_token.type)) > @intFromEnum(precedence)) {
+            const operator = self.current_token.type;
+            const op_precedence = precedence_file.getTokenPrecedence(operator);
+
+            self.nextToken(); // consume operator
+
+            // Parse right side with higher precedence
+            const right = try self.parseExpressionWithPrecedence(op_precedence);
+
+            // Build binary expression
+            const binary_expr = try self.allocator.create(ast.Expr);
+            binary_expr.* = ast.Expr{
+                .binary = ast.BinaryExpr{
+                    .left = left,
+                    .operator = tokenTypeToBinaryOp(operator),
+                    .right = right,
+                },
+            };
+
+            left = binary_expr;
+        }
+
+        return left;
     }
 
     fn parseIntegerLiteral(self: *Parser) !*ast.Expr {
@@ -106,3 +137,13 @@ pub const Parser = struct {
         return expr;
     }
 };
+
+fn tokenTypeToBinaryOp(token_type: TokenType) ast.BinaryOp {
+    return switch (token_type) {
+        TokenType.PLUS => ast.BinaryOp.Add,
+        TokenType.MINUS => ast.BinaryOp.Subtract,
+        TokenType.STAR => ast.BinaryOp.Multiply,
+        TokenType.SLASH => ast.BinaryOp.Divide,
+        else => unreachable,
+    };
+}
