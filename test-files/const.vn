@@ -1,0 +1,2 @@
+const age = 28;
+age + 1;

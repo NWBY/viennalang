@@ -2,6 +2,7 @@ const std = @import("std");
 const Lexer = @import("lexer/lexer.zig").Lexer;
 const Parser = @import("parser/parser.zig").Parser;
 const Interpreter = @import("interpreter/interpreter.zig").Interpreter;
+const TokenType = @import("lexer/token.zig").TokenType;
 const ast = @import("parser/ast.zig");
 
 pub fn main() !void {
@@ -48,17 +49,21 @@ pub fn main() !void {
     var parser = Parser.init(allocator, &lexer);
     var interpreter = Interpreter.init(allocator);
 
-    const expr = parser.parseExpression() catch |err| {
-        std.debug.print("Parse error: {}\n", .{err});
-        std.process.exit(1);
-    };
+    while (!parser.currentTokenIs(TokenType.EOF)) {
+        const stmt = try parser.parseStatement();
 
-    const result = interpreter.eval(expr) catch |err| {
-        std.debug.print("Runtime error: {}\n", .{err});
-        std.process.exit(1);
-    };
-
-    std.debug.print("Result: ", .{});
-    result.print();
-    std.debug.print("\n\n", .{});
+        // Check if it's an expression statement - if so, save the result
+        switch (stmt.*) {
+            .expr_stmt => |expr_stmt| {
+                const result_expr = try interpreter.evalExpr(&expr_stmt.expr);
+                // Print the result
+                result_expr.print();
+                std.debug.print("\n", .{});
+            },
+            else => {
+                // For const, var, etc - just execute
+                try interpreter.evalStmt(stmt);
+            },
+        }
+    }
 }
