@@ -38,6 +38,7 @@ pub fn main() !void {
     const source = try file.readToEndAlloc(allocator, 1024 * 1024); // Max 1MB
     defer allocator.free(source);
 
+    std.debug.print("\n", .{});
     std.debug.print("Running: {s}\n", .{filename});
     std.debug.print("File contents: {s}\n", .{source});
     std.debug.print("{s}\n", .{"─" ** 50});
@@ -59,5 +60,5 @@ pub fn main() !void {
 
     std.debug.print("Result: ", .{});
     result.print();
-    std.debug.print("\n", .{});
+    std.debug.print("\n\n", .{});
 }
