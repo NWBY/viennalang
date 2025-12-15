@@ -38,6 +38,26 @@ pub const Parser = struct {
         return self.peek_token.type == token_type;
     }
 
+    // Parse entry point
+    pub fn parseExpression(self: *Parser) !*ast.Expr {
+        return try self.parsePrimaryExpression();
+    }
+
+    // Parse primary expressions (literals)
+    // Literals: int, string, bool
+    // Will add more types later
+    fn parsePrimaryExpression(self: *Parser) !*ast.Expr {
+        switch (self.current_token.type) {
+            TokenType.INT => return try self.parseIntegerLiteral(),
+            TokenType.STRING => return try self.parseStringLiteral(),
+            TokenType.TRUE, TokenType.FALSE => return try self.parseBooleanLiteral(),
+            else => {
+                std.debug.print("Unexpected token: {s}\n", .{@tagName(self.current_token.type)});
+                return error.UnexpectedToken;
+            },
+        }
+    }
+
     fn parseIntegerLiteral(self: *Parser) !*ast.Expr {
         // Parse the string to an integer
         const value = try std.fmt.parseInt(i64, self.current_token.lexeme, 10);
