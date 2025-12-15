@@ -3,6 +3,7 @@ const Lexer = @import("../lexer/lexer.zig").Lexer;
 const Token = @import("../lexer/token.zig").Token;
 const TokenType = @import("../lexer/token.zig").TokenType;
 const precedence_file = @import("precendence.zig");
+const ViennaError = @import("../interpreter/error.zig").ViennaError;
 const ast = @import("ast.zig");
 
 pub const Parser = struct {
@@ -10,6 +11,7 @@ pub const Parser = struct {
     current_token: Token,
     peek_token: Token,
     allocator: std.mem.Allocator,
+    had_error: bool,
 
     pub fn init(allocator: std.mem.Allocator, lexer: *Lexer) Parser {
         var parser = Parser{
@@ -17,6 +19,7 @@ pub const Parser = struct {
             .current_token = undefined,
             .peek_token = undefined,
             .allocator = allocator,
+            .had_error = false,
         };
 
         // Read two tokens so current_token and peek_token are both set
@@ -39,6 +42,19 @@ pub const Parser = struct {
         return self.peek_token.type == token_type;
     }
 
+    fn reportError(self: *Parser, message: []const u8) void {
+        self.had_error = true;
+
+        const err = ViennaError{
+            .message = message,
+            .line = self.current_token.line,
+            .column = self.current_token.column,
+            .source_line = self.lexer.getCurrentLine(),
+        };
+
+        err.print();
+    }
+
     // Parse entry point
     pub fn parseExpression(self: *Parser) !*ast.Expr {
         return try self.parseExpressionWithPrecedence(precedence_file.Precedence.LOWEST);
@@ -53,7 +69,7 @@ pub const Parser = struct {
             TokenType.STRING => return try self.parseStringLiteral(),
             TokenType.TRUE, TokenType.FALSE => return try self.parseBooleanLiteral(),
             else => {
-                std.debug.print("Unexpected token: {s}\n", .{@tagName(self.current_token.type)});
+                self.reportError("Expected expression");
                 return error.UnexpectedToken;
             },
         }

@@ -35,4 +35,5 @@ pub const Token = struct {
     type: TokenType,
     lexeme: []const u8,
     line: usize,
+    column: usize,
 };

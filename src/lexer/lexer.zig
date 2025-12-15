@@ -6,12 +6,16 @@ pub const Lexer = struct {
     source: []const u8,
     current: usize,
     line: usize,
+    column: usize,
+    line_start: usize,
 
     pub fn init(source: []const u8) Lexer {
         return Lexer{
             .source = source,
             .current = 0,
             .line = 1,
+            .column = 1,
+            .line_start = 0,
         };
     }
 
@@ -64,6 +68,7 @@ pub const Lexer = struct {
     fn advance(self: *Lexer) u8 {
         const c = self.source[self.current];
         self.current += 1;
+        self.column += 1;
         return c;
     }
 
@@ -81,6 +86,8 @@ pub const Lexer = struct {
                 },
                 '\n' => {
                     self.line += 1;
+                    self.column = 1;
+                    self.line_start = self.current + 1;
                     _ = self.advance();
                 },
                 else => return,
@@ -99,6 +106,7 @@ pub const Lexer = struct {
             .type = TokenType.INT,
             .lexeme = self.source[start..self.current],
             .line = self.line,
+            .column = self.column,
         };
     }
 
@@ -120,6 +128,7 @@ pub const Lexer = struct {
             .type = TokenType.STRING,
             .lexeme = self.source[start .. self.current - 1],
             .line = self.line,
+            .column = self.column,
         };
     }
 
@@ -137,6 +146,7 @@ pub const Lexer = struct {
             .type = tokenType,
             .lexeme = text,
             .line = self.line,
+            .column = self.column,
         };
     }
 
@@ -161,6 +171,7 @@ pub const Lexer = struct {
             .type = tokenType,
             .lexeme = self.source[self.current - 1 .. self.current],
             .line = self.line,
+            .column = self.column - 1,
         };
     }
 
@@ -169,6 +180,15 @@ pub const Lexer = struct {
             .type = TokenType.EOF, // TODO: make a proper error token type
             .lexeme = message,
             .line = self.line,
+            .column = self.column - 1,
         };
+    }
+
+    pub fn getCurrentLine(self: *Lexer) []const u8 {
+        var end = self.line_start;
+        while (end < self.source.len and self.source[end] != '\n') {
+            end += 1;
+        }
+        return self.source[self.line_start..end];
     }
 };
