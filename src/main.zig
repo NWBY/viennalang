@@ -14,29 +14,46 @@ pub fn main() !void {
     defer arena.deinit(); // This frees ALL allocations at once
     const allocator = arena.allocator();
 
-    // Test expressions
-    const sources = [_][]const u8{
-        "42",
-        "5 + 3",
-        "5 + 3 * 2",
-        "10 - 2 - 3",
-        "100 / 10",
-        "2 * 3 + 4 * 5",
-    };
+    // Get command line arguments
+    const args = try std.process.argsAlloc(allocator);
+    defer std.process.argsFree(allocator, args);
 
+    if (args.len < 2) {
+        std.debug.print("Usage: vienna <file.vn>\n", .{});
+        std.process.exit(1);
+    }
+
+    const filename = args[1];
+
+    // Check file extension
+    if (!std.mem.endsWith(u8, filename, ".vn")) {
+        std.debug.print("Error: File must have .vn extension\n", .{});
+        std.process.exit(1);
+    }
+
+    // Read the file
+    const file = try std.fs.cwd().openFile(filename, .{});
+    defer file.close();
+
+    const source = try file.readToEndAlloc(allocator, 1024 * 1024); // Max 1MB
+    defer allocator.free(source);
+
+    // Parse and execute
+    var lexer = Lexer.init(source);
+    var parser = Parser.init(allocator, &lexer);
     var interpreter = Interpreter.init(allocator);
 
-    for (sources) |source| {
-        std.debug.print("\nEvaluating: {s}\n", .{source});
+    const expr = parser.parseExpression() catch |err| {
+        std.debug.print("Parse error: {}\n", .{err});
+        std.process.exit(1);
+    };
 
-        var lexer = Lexer.init(source);
-        var parser = Parser.init(allocator, &lexer);
+    const result = interpreter.eval(expr) catch |err| {
+        std.debug.print("Runtime error: {}\n", .{err});
+        std.process.exit(1);
+    };
 
-        const expr = try parser.parseExpression();
-        const result = try interpreter.eval(expr);
-
-        std.debug.print("Result: ", .{});
-        result.print();
-        std.debug.print("\n", .{});
-    }
+    // Print result
+    result.print();
+    std.debug.print("\n", .{});
 }
