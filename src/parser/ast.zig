@@ -8,6 +8,7 @@ pub const Expr = union(enum) {
     identifier: Identifier,
     binary: BinaryExpr,
     assignment: AssignExpr,
+    call: CallExpr,
 };
 
 pub const IntLiteral = struct {
@@ -83,4 +84,9 @@ pub const FuncDecl = struct {
 pub const Parameter = struct {
     name: []const u8,
     type_annotation: ?[]const u8,
+};
+
+pub const CallExpr = struct {
+    name: []const u8,
+    arguments: []*Expr,
 };

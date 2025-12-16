@@ -6,7 +6,7 @@ const precedence_file = @import("precendence.zig");
 const ViennaError = @import("../interpreter/error.zig").ViennaError;
 const ast = @import("ast.zig");
 
-const ParserError = error{ ExpectedAssignment, ExpectedSemicolon, ExpectedEquals, UnexpectedToken, ExpectedExpression, ExpectReturnType, OutOfMemory, Overflow, InvalidCharacter, ExpectedRightBrace, ExpectedLeftBrace, ExpectedLeftParen, ExpectedRightParen, ExpectedColon, ExpectedComma, ExpectedFuncDeclaration, ExpectedFuncParameters, ExpectedFuncReturnType, ExpectedFuncBody };
+const ParserError = error{ ExpectedAssignment, ExpectedSemicolon, ExpectedEquals, UnexpectedToken, ExpectedExpression, ExpectReturnType, OutOfMemory, Overflow, InvalidCharacter, ExpectedRightBrace, ExpectedLeftBrace, ExpectedLeftParen, ExpectedRightParen, ExpectedColon, ExpectedComma, ExpectedFuncDeclaration, ExpectedFuncParameters, ExpectedFuncReturnType, ExpectedFuncBody, ExpectedCommaOrRightParen };
 
 pub const Parser = struct {
     lexer: *Lexer,
@@ -276,6 +276,11 @@ pub const Parser = struct {
     fn parseIdentifier(self: *Parser) !*ast.Expr {
         const name = self.current_token.lexeme;
 
+        if (self.peekTokenIs(TokenType.LPAREN)) {
+            self.nextToken(); // consume identifier
+            return try self.parseFunctionCall(name);
+        }
+
         const expr = try self.allocator.create(ast.Expr);
 
         expr.* = ast.Expr{
@@ -426,6 +431,47 @@ pub const Parser = struct {
         }
 
         return stmt;
+    }
+
+    fn parseFunctionCall(self: *Parser, name: []const u8) ParserError!*ast.Expr {
+        const expr = try self.allocator.create(ast.Expr);
+        expr.* = ast.Expr{
+            .call = ast.CallExpr{
+                .name = name,
+                .arguments = try self.parseArguments(),
+            },
+        };
+        return expr;
+    }
+
+    fn parseArguments(self: *Parser) ParserError![]*ast.Expr {
+        var arguments = try std.ArrayList(*ast.Expr).initCapacity(self.allocator, 10);
+
+        if (!self.currentTokenIs(TokenType.LPAREN)) {
+            self.reportError("Expected '(' after function name");
+            return ParserError.ExpectedLeftParen;
+        }
+        self.nextToken(); // consume left parenthesis
+
+        while (!self.currentTokenIs(TokenType.RPAREN) and !self.currentTokenIs(TokenType.EOF)) {
+            const arg = try self.parseExpression();
+            try arguments.append(self.allocator, arg);
+
+            if (self.currentTokenIs(TokenType.COMMA)) {
+                self.nextToken(); // consume comma
+            } else if (!self.currentTokenIs(TokenType.RPAREN)) {
+                self.reportError("Expected ',' or ')' after argument");
+                return ParserError.ExpectedCommaOrRightParen;
+            }
+        }
+
+        if (!self.currentTokenIs(TokenType.RPAREN)) {
+            self.reportError("Expected ')' after arguments");
+            return ParserError.ExpectedRightParen;
+        }
+        self.nextToken(); // consume right parenthesis
+
+        return arguments.items;
     }
 };
 
