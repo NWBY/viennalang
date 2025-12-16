@@ -50,6 +50,7 @@ pub const Stmt = union(enum) {
     var_decl: VarDecl,
     return_stmt: ReturnStmt,
     expr_stmt: ExprStmt,
+    func_decl: FuncDecl,
 };
 
 pub const ConstDecl = struct {
@@ -70,4 +71,16 @@ pub const ReturnStmt = struct {
 
 pub const ExprStmt = struct {
     expr: Expr,
+};
+
+pub const FuncDecl = struct {
+    name: []const u8,
+    return_type: ?[]const u8,
+    parameters: []const Parameter,
+    body: []*Stmt,
+};
+
+pub const Parameter = struct {
+    name: []const u8,
+    type_annotation: ?[]const u8,
 };

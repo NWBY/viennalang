@@ -4,7 +4,7 @@ Vienna is an experimental programming language built in Zig.
 
 Below is an example of the language showcasing it's proposed features and syntax:
 
-```
+```vienna
 // Constants
 const PORT = 3000;
 const MAX_USERS = 100;

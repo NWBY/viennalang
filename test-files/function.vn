@@ -1,0 +1,12 @@
+func add(a: int, b: int) -> int {
+    const result = a + b;
+    return result;
+}
+
+func greet(name: string) -> void {
+    const message = "Hello, " + name;
+}
+
+func noReturn() {
+    const x = 5;
+}

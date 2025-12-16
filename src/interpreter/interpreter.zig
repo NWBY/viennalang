@@ -116,6 +116,9 @@ pub const Interpreter = struct {
                 // Just evaluate the expression and throw away the result
                 _ = try self.evalExpr(&expr_stmt.expr);
             },
+            .func_decl => {
+                return InterpreterError.NotImplemented;
+            },
             .return_stmt => {
                 return InterpreterError.NotImplemented;
             },

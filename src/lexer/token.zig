@@ -19,12 +19,15 @@ pub const TokenType = enum {
     SLASH,
     ASSIGN,
     SEMICOLON,
+    GREATER,
 
     // Delimiters
     LPAREN,
     RPAREN,
     LBRACE,
     RBRACE,
+    COMMA,
+    COLON,
 
     // Other
     IDENT,

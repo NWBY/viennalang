@@ -64,6 +64,26 @@ pub fn main() !void {
                 result_expr.print();
                 std.debug.print("\n", .{});
             },
+            .func_decl => |func_decl| {
+                // NEW: Print function declaration info for testing
+                std.debug.print("✓ Parsed function: {s}(", .{func_decl.name});
+
+                // Print parameters
+                for (func_decl.parameters, 0..) |param, i| {
+                    if (i > 0) std.debug.print(", ", .{});
+                    std.debug.print("{s}: {s}", .{ param.name, param.type_annotation orelse "?" });
+                }
+
+                std.debug.print(")", .{});
+
+                // Print return type
+                if (func_decl.return_type) |ret_type| {
+                    std.debug.print(" -> {s}", .{ret_type});
+                }
+
+                // Print body info
+                std.debug.print(" {{ {d} statement(s) }}\n", .{func_decl.body.len});
+            },
             else => {
                 // For const, var, etc - just execute
                 interpreter.evalStmt(stmt) catch {

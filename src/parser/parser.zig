@@ -6,7 +6,7 @@ const precedence_file = @import("precendence.zig");
 const ViennaError = @import("../interpreter/error.zig").ViennaError;
 const ast = @import("ast.zig");
 
-const ParserError = error{ ExpectedAssignment, ExpectedSemicolon, ExpectedEquals, UnexpectedToken, ExpectedExpression, OutOfMemory, Overflow, InvalidCharacter };
+const ParserError = error{ ExpectedAssignment, ExpectedSemicolon, ExpectedEquals, UnexpectedToken, ExpectedExpression, ExpectReturnType, OutOfMemory, Overflow, InvalidCharacter, ExpectedRightBrace, ExpectedLeftBrace, ExpectedLeftParen, ExpectedRightParen, ExpectedColon, ExpectedComma, ExpectedFuncDeclaration, ExpectedFuncParameters, ExpectedFuncReturnType, ExpectedFuncBody };
 
 pub const Parser = struct {
     lexer: *Lexer,
@@ -66,6 +66,8 @@ pub const Parser = struct {
         switch (self.current_token.type) {
             TokenType.CONST => return try self.parseConstDeclaration(),
             TokenType.VAR => return try self.parseVarDeclaration(),
+            TokenType.FUNC => return try self.parseFuncDeclaration(),
+            TokenType.RETURN => return try self.parseReturnStatement(),
             else => {
                 // 1. Parse expression
                 const expr = try self.parseExpression();
@@ -284,6 +286,146 @@ pub const Parser = struct {
 
         self.nextToken();
         return expr;
+    }
+
+    fn parseFuncDeclaration(self: *Parser) ParserError!*ast.Stmt {
+        self.nextToken(); // consume func
+
+        const func_name = self.current_token.lexeme;
+        self.nextToken(); // consume function name
+
+        if (!self.currentTokenIs(TokenType.LPAREN)) {
+            self.reportError("Expected '(' after function name");
+            return ParserError.ExpectedLeftParen;
+        }
+        self.nextToken(); // consume left parenthesis
+
+        const parameters = try self.parseParameters();
+
+        if (!self.currentTokenIs(TokenType.RPAREN)) {
+            self.reportError("Expected ')' after parameters");
+            return ParserError.ExpectedRightParen;
+        }
+        self.nextToken(); // consume right parenthesis
+
+        const return_type = try self.parseReturnType();
+
+        if (!self.currentTokenIs(TokenType.LBRACE)) {
+            self.reportError("Expected '{' after function parameters");
+            return ParserError.ExpectedLeftBrace;
+        }
+        self.nextToken(); // consume left brace
+
+        const body = try self.parseBlock();
+
+        const stmt = try self.allocator.create(ast.Stmt);
+        stmt.* = ast.Stmt{
+            .func_decl = ast.FuncDecl{
+                .name = func_name,
+                .return_type = return_type,
+                .parameters = parameters,
+                .body = body,
+            },
+        };
+        return stmt;
+    }
+
+    fn parseParameters(self: *Parser) ParserError![]ast.Parameter {
+        var parameters = try std.ArrayList(ast.Parameter).initCapacity(self.allocator, 10);
+
+        while (self.currentTokenIs(TokenType.IDENT)) {
+            const param_name = self.current_token.lexeme;
+            self.nextToken(); // consume parameter name
+
+            if (!self.currentTokenIs(TokenType.COLON)) {
+                self.reportError("Expected ':' after parameter name");
+                return ParserError.ExpectedColon;
+            }
+            self.nextToken(); // consume colon
+
+            const param_type = self.current_token.lexeme;
+            self.nextToken(); // consume parameter type
+
+            try parameters.append(self.allocator, ast.Parameter{
+                .name = param_name,
+                .type_annotation = param_type,
+            });
+
+            if (self.currentTokenIs(TokenType.RPAREN)) {
+                break;
+            }
+
+            if (!self.currentTokenIs(TokenType.COMMA)) {
+                self.reportError("Expected ',' after parameter");
+                return ParserError.ExpectedComma;
+            }
+            self.nextToken(); // consume comma
+        }
+
+        return parameters.items;
+    }
+
+    fn parseReturnType(self: *Parser) ParserError!?[]const u8 {
+        if (!self.currentTokenIs(TokenType.MINUS) or !self.peekTokenIs(TokenType.GREATER)) {
+            return null;
+        }
+        self.nextToken(); // consume -
+        self.nextToken(); // consume >
+
+        const return_type = self.current_token.lexeme;
+        self.nextToken(); // consume return type
+
+        return return_type;
+    }
+
+    fn parseBlock(self: *Parser) ParserError![]*ast.Stmt {
+        var statements = try std.ArrayList(*ast.Stmt).initCapacity(self.allocator, 10);
+
+        while (!self.currentTokenIs(TokenType.RBRACE) and !self.currentTokenIs(TokenType.EOF)) {
+            const stmt = try self.parseStatement();
+            try statements.append(self.allocator, stmt);
+        }
+
+        if (!self.currentTokenIs(TokenType.RBRACE)) {
+            self.reportError("Expected '}' after function body");
+            return ParserError.ExpectedRightBrace;
+        }
+        self.nextToken(); // consume }
+
+        return statements.items;
+    }
+
+    fn parseReturnStatement(self: *Parser) ParserError!*ast.Stmt {
+        self.nextToken(); // consume return
+
+        const stmt = try self.allocator.create(ast.Stmt);
+
+        // Check if there's a return value
+        if (self.currentTokenIs(TokenType.SEMICOLON)) {
+            // No return value: return;
+            stmt.* = ast.Stmt{
+                .return_stmt = ast.ReturnStmt{
+                    .value = null,
+                },
+            };
+            self.nextToken(); // consume semicolon
+        } else {
+            // Has return value: return expr;
+            const expr = try self.parseExpression();
+            if (!self.currentTokenIs(TokenType.SEMICOLON)) {
+                self.reportError("Expected ';' after return value");
+                return ParserError.ExpectedSemicolon;
+            }
+            self.nextToken(); // consume semicolon
+
+            stmt.* = ast.Stmt{
+                .return_stmt = ast.ReturnStmt{
+                    .value = expr.*,
+                },
+            };
+        }
+
+        return stmt;
     }
 };
 

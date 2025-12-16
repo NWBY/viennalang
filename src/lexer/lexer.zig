@@ -40,6 +40,9 @@ pub const Lexer = struct {
             '/' => return self.makeToken(TokenType.SLASH),
             ';' => return self.makeToken(TokenType.SEMICOLON),
             '=' => return self.makeToken(TokenType.ASSIGN),
+            ',' => return self.makeToken(TokenType.COMMA),
+            ':' => return self.makeToken(TokenType.COLON),
+            '>' => return self.makeToken(TokenType.GREATER),
             else => {},
         }
 
