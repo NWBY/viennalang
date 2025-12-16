@@ -1,4 +1,2 @@
 const age = 28;
-age + 1;
-
-age = 10;
+var incrAge = age + 1;

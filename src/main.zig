@@ -50,19 +50,25 @@ pub fn main() !void {
     var interpreter = Interpreter.init(allocator);
 
     while (!parser.currentTokenIs(TokenType.EOF)) {
-        const stmt = try parser.parseStatement();
+        const stmt = parser.parseStatement() catch {
+            std.process.exit(1);
+        };
 
         // Check if it's an expression statement - if so, save the result
         switch (stmt.*) {
             .expr_stmt => |expr_stmt| {
-                const result_expr = try interpreter.evalExpr(&expr_stmt.expr);
+                const result_expr = interpreter.evalExpr(&expr_stmt.expr) catch {
+                    std.process.exit(1);
+                };
                 // Print the result
                 result_expr.print();
                 std.debug.print("\n", .{});
             },
             else => {
                 // For const, var, etc - just execute
-                try interpreter.evalStmt(stmt);
+                interpreter.evalStmt(stmt) catch {
+                    std.process.exit(1);
+                };
             },
         }
     }

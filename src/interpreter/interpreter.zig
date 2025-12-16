@@ -39,6 +39,20 @@ pub const Interpreter = struct {
                     return InterpreterError.UndefinedVariable;
                 }
             },
+            .assignment => |assign| {
+                const value = try self.evalExpr(assign.value);
+
+                if (self.environment.getPtr(assign.name)) |variable| {
+                    if (variable.is_const) {
+                        return InterpreterError.CannotReassignConst;
+                    }
+                    variable.value = value;
+                } else {
+                    return InterpreterError.UndefinedVariable;
+                }
+
+                return value;
+            },
         };
     }
 

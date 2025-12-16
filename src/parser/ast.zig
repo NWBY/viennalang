@@ -7,6 +7,7 @@ pub const Expr = union(enum) {
     bool_literal: BoolLiteral,
     identifier: Identifier,
     binary: BinaryExpr,
+    assignment: AssignExpr,
 };
 
 pub const IntLiteral = struct {
@@ -36,6 +37,11 @@ pub const BinaryOp = enum {
     Subtract,
     Multiply,
     Divide,
+};
+
+pub const AssignExpr = struct {
+    name: []const u8,
+    value: *Expr,
 };
 
 // Statement types

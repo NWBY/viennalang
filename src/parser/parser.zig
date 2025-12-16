@@ -6,6 +6,8 @@ const precedence_file = @import("precendence.zig");
 const ViennaError = @import("../interpreter/error.zig").ViennaError;
 const ast = @import("ast.zig");
 
+const ParserError = error{ ExpectedAssignment, ExpectedSemicolon, ExpectedEquals, UnexpectedToken, ExpectedExpression, OutOfMemory, Overflow, InvalidCharacter };
+
 pub const Parser = struct {
     lexer: *Lexer,
     current_token: Token,
@@ -60,7 +62,7 @@ pub const Parser = struct {
         return try self.parseExpressionWithPrecedence(precedence_file.Precedence.LOWEST);
     }
 
-    pub fn parseStatement(self: *Parser) !*ast.Stmt {
+    pub fn parseStatement(self: *Parser) ParserError!*ast.Stmt {
         switch (self.current_token.type) {
             TokenType.CONST => return try self.parseConstDeclaration(),
             TokenType.VAR => return try self.parseVarDeclaration(),
@@ -68,12 +70,17 @@ pub const Parser = struct {
                 // 1. Parse expression
                 const expr = try self.parseExpression();
 
+                if (expr.* != .assignment) {
+                    self.reportError("Expected assignment expression");
+                    return ParserError.ExpectedAssignment;
+                }
+
                 // 2. Check for semicolon
                 if (self.currentTokenIs(TokenType.SEMICOLON)) {
                     self.nextToken(); // consume semicolon
                 } else {
                     self.reportError("Expected ';' after expression");
-                    return error.ExpectedSemicolon;
+                    return ParserError.ExpectedSemicolon;
                 }
 
                 // 3. Create Stmt with expr_stmt
@@ -100,12 +107,29 @@ pub const Parser = struct {
             TokenType.IDENT => return try self.parseIdentifier(),
             else => {
                 self.reportError("Expected expression");
-                return error.UnexpectedToken;
+                return ParserError.UnexpectedToken;
             },
         }
     }
 
     fn parseExpressionWithPrecedence(self: *Parser, precedence: precedence_file.Precedence) !*ast.Expr {
+        if (self.current_token.type == TokenType.IDENT and self.peekTokenIs(TokenType.ASSIGN)) {
+            const name = self.current_token.lexeme;
+            self.nextToken(); // consume identifier
+            self.nextToken(); // consume assignment
+
+            const value = try self.parseExpressionWithPrecedence(precedence_file.Precedence.LOWEST);
+            const assign_expr = try self.allocator.create(ast.Expr);
+            assign_expr.* = ast.Expr{
+                .assignment = ast.AssignExpr{
+                    .name = name,
+                    .value = value,
+                },
+            };
+
+            return assign_expr;
+        }
+
         // Parse left side (a number, identifier, etc.)
         var left = try self.parsePrimaryExpression();
 
@@ -183,7 +207,7 @@ pub const Parser = struct {
         return expr;
     }
 
-    fn parseConstDeclaration(self: *Parser) !*ast.Stmt {
+    fn parseConstDeclaration(self: *Parser) ParserError!*ast.Stmt {
         self.nextToken(); // consume const
 
         const name = self.current_token.lexeme;
@@ -191,7 +215,7 @@ pub const Parser = struct {
         self.nextToken(); // consume name
         if (!self.currentTokenIs(TokenType.ASSIGN)) {
             self.reportError("Expected '=' after constant name");
-            return error.ExpectedEquals; // Report the error!
+            return ParserError.ExpectedEquals; // Report the error!
         }
         self.nextToken();
 
@@ -201,7 +225,7 @@ pub const Parser = struct {
 
         if (!self.currentTokenIs(TokenType.SEMICOLON)) { // ✓ Check current
             self.reportError("Expected ';' after constant declaration");
-            return error.ExpectedSemicolon;
+            return ParserError.ExpectedSemicolon;
         }
         self.nextToken();
 
@@ -215,7 +239,7 @@ pub const Parser = struct {
         return stmt;
     }
 
-    fn parseVarDeclaration(self: *Parser) !*ast.Stmt {
+    fn parseVarDeclaration(self: *Parser) ParserError!*ast.Stmt {
         self.nextToken(); // consume var
 
         const name = self.current_token.lexeme;
@@ -223,7 +247,7 @@ pub const Parser = struct {
         self.nextToken(); // consume name
         if (!self.currentTokenIs(TokenType.ASSIGN)) {
             self.reportError("Expected '=' after variable name");
-            return error.ExpectedEquals; // Report the error!
+            return ParserError.ExpectedEquals; // Report the error!
         }
         self.nextToken();
 
@@ -233,7 +257,7 @@ pub const Parser = struct {
 
         if (!self.currentTokenIs(TokenType.SEMICOLON)) { // ✓ Check current
             self.reportError("Expected ';' after variable declaration");
-            return error.ExpectedSemicolon;
+            return ParserError.ExpectedSemicolon;
         }
         self.nextToken();
 
