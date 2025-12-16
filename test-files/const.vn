@@ -1,2 +1,4 @@
 const age = 28;
 age + 1;
+
+age = 10;

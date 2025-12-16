@@ -63,6 +63,7 @@ pub const Parser = struct {
     pub fn parseStatement(self: *Parser) !*ast.Stmt {
         switch (self.current_token.type) {
             TokenType.CONST => return try self.parseConstDeclaration(),
+            TokenType.VAR => return try self.parseVarDeclaration(),
             else => {
                 // 1. Parse expression
                 const expr = try self.parseExpression();
@@ -96,6 +97,7 @@ pub const Parser = struct {
             TokenType.INT => return try self.parseIntegerLiteral(),
             TokenType.STRING => return try self.parseStringLiteral(),
             TokenType.TRUE, TokenType.FALSE => return try self.parseBooleanLiteral(),
+            TokenType.IDENT => return try self.parseIdentifier(),
             else => {
                 self.reportError("Expected expression");
                 return error.UnexpectedToken;
@@ -211,6 +213,53 @@ pub const Parser = struct {
             },
         };
         return stmt;
+    }
+
+    fn parseVarDeclaration(self: *Parser) !*ast.Stmt {
+        self.nextToken(); // consume var
+
+        const name = self.current_token.lexeme;
+
+        self.nextToken(); // consume name
+        if (!self.currentTokenIs(TokenType.ASSIGN)) {
+            self.reportError("Expected '=' after variable name");
+            return error.ExpectedEquals; // Report the error!
+        }
+        self.nextToken();
+
+        const value = try self.parseExpression();
+
+        const stmt = try self.allocator.create(ast.Stmt);
+
+        if (!self.currentTokenIs(TokenType.SEMICOLON)) { // ✓ Check current
+            self.reportError("Expected ';' after variable declaration");
+            return error.ExpectedSemicolon;
+        }
+        self.nextToken();
+
+        stmt.* = ast.Stmt{
+            .var_decl = ast.VarDecl{
+                .name = name,
+                .type_annotation = null,
+                .value = value.*,
+            },
+        };
+        return stmt;
+    }
+
+    fn parseIdentifier(self: *Parser) !*ast.Expr {
+        const name = self.current_token.lexeme;
+
+        const expr = try self.allocator.create(ast.Expr);
+
+        expr.* = ast.Expr{
+            .identifier = ast.Identifier{
+                .name = name,
+            },
+        };
+
+        self.nextToken();
+        return expr;
     }
 };
 

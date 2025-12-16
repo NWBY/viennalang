@@ -4,16 +4,21 @@ const ast = @import("../parser/ast.zig");
 const Value = @import("value.zig").Value;
 
 // Explicitly define possible errors
-pub const InterpreterError = error{ TypeError, DivisionByZero, NotImplemented, UndefinedVariable, OutOfMemory };
+pub const InterpreterError = error{ TypeError, DivisionByZero, NotImplemented, UndefinedVariable, OutOfMemory, CannotReassignConst, VariableAlreadyDeclared };
+
+pub const Variable = struct {
+    value: Value,
+    is_const: bool,
+};
 
 pub const Interpreter = struct {
     allocator: std.mem.Allocator,
-    environment: std.StringHashMap(Value),
+    environment: std.StringHashMap(Variable),
 
     pub fn init(allocator: std.mem.Allocator) Interpreter {
         return Interpreter{
             .allocator = allocator,
-            .environment = std.StringHashMap(Value).init(allocator),
+            .environment = std.StringHashMap(Variable).init(allocator),
         };
     }
 
@@ -28,8 +33,8 @@ pub const Interpreter = struct {
             .bool_literal => |lit| Value{ .bool = lit.value },
             .binary => |bin| try self.evalBinary(bin),
             .identifier => |ident| {
-                if (self.environment.get(ident.name)) |value| {
-                    return value;
+                if (self.environment.get(ident.name)) |variable| {
+                    return variable.value;
                 } else {
                     return InterpreterError.UndefinedVariable;
                 }
@@ -66,15 +71,32 @@ pub const Interpreter = struct {
     pub fn evalStmt(self: *Interpreter, stmt: *ast.Stmt) InterpreterError!void {
         switch (stmt.*) {
             .const_decl => |decl| {
+                if (self.environment.contains(decl.name)) {
+                    return InterpreterError.VariableAlreadyDeclared;
+                }
+
                 // 1. Evaluate the value expression
                 const value = try self.evalExpr(&decl.value);
 
                 // 2. Store it in the environment
-                try self.environment.put(decl.name, value);
+                try self.environment.put(decl.name, Variable{
+                    .value = value,
+                    .is_const = true,
+                });
             },
-            .var_decl => |_| {
-                // Similar to const_decl - we'll add this later
-                return InterpreterError.NotImplemented;
+            .var_decl => |decl| {
+                if (self.environment.contains(decl.name)) {
+                    return InterpreterError.VariableAlreadyDeclared;
+                }
+
+                // 1. Evaluate the value expression
+                const value = try self.evalExpr(&decl.value);
+
+                // 2. Store it in the environment
+                try self.environment.put(decl.name, Variable{
+                    .value = value,
+                    .is_const = false,
+                });
             },
             .expr_stmt => |expr_stmt| {
                 // Just evaluate the expression and throw away the result
@@ -83,6 +105,18 @@ pub const Interpreter = struct {
             .return_stmt => {
                 return InterpreterError.NotImplemented;
             },
+        }
+    }
+
+    // Helper function for when assignment expressions are added
+    pub fn assignVariable(self: *Interpreter, name: []const u8, value: Value) InterpreterError!void {
+        if (self.environment.getPtr(name)) |variable| {
+            if (variable.is_const) {
+                return InterpreterError.CannotReassignConst;
+            }
+            variable.value = value;
+        } else {
+            return InterpreterError.UndefinedVariable;
         }
     }
 };
