@@ -4,7 +4,7 @@ const ast = @import("../parser/ast.zig");
 const Value = @import("value.zig").Value;
 
 // Explicitly define possible errors
-pub const InterpreterError = error{ TypeError, DivisionByZero, NotImplemented, UndefinedVariable, OutOfMemory, CannotReassignConst, VariableAlreadyDeclared, FunctionAlreadyDeclared, UndefinedFunction };
+pub const InterpreterError = error{ TypeError, DivisionByZero, NotImplemented, UndefinedVariable, OutOfMemory, CannotReassignConst, VariableAlreadyDeclared, FunctionAlreadyDeclared, UndefinedFunction, ArgumentCountMismatch };
 
 pub const Variable = struct {
     value: Value,
@@ -66,11 +66,43 @@ pub const Interpreter = struct {
                     return InterpreterError.UndefinedFunction;
                 }
 
-                const function = self.functions.getPtr(call.name);
+                const function = self.functions.getPtr(call.name).?;
 
                 if (function.parameters.len != call.arguments.len) {
                     return InterpreterError.ArgumentCountMismatch;
                 }
+
+                var arg_values = try std.ArrayList(Value).initCapacity(self.allocator, call.arguments.len);
+                for (call.arguments) |arg_expr| {
+                    const arg_value = try self.evalExpr(arg_expr);
+                    try arg_values.append(arg_value);
+                }
+
+                // Save reference to current environment
+                const old_environment = self.environment;
+                // Create new environment for function scope
+                var new_environment = std.StringHashMap(Variable).init(self.allocator);
+                self.environment = new_environment;
+
+                // Bind parameters to argument values
+                for (function.parameters, arg_values.items) |param, arg_value| {
+                    try self.environment.put(param.name, Variable{
+                        .value = arg_value,
+                        .is_const = true, // or false, depending on your language design
+                    });
+                }
+
+                // Execute function body
+                var return_value: ?Value = null;
+                for (function.body) |stmt| {
+                    // How do you detect if this statement is a return?
+                    // You'll need to modify evalStmt or create a new method
+                    try self.evalStmt(stmt);
+                }
+
+                // Restore old environment
+                new_environment.deinit(); // Clean up function's environment
+                self.environment = old_environment;
             },
         };
     }
