@@ -10,3 +10,5 @@ func greet(name: string) -> void {
 func noReturn() {
     const x = 5;
 }
+
+add(10, 20);

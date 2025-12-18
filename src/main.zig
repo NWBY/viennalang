@@ -85,10 +85,8 @@ pub fn main() !void {
                 std.debug.print(" {{ {d} statement(s) }}\n", .{func_decl.body.len});
             },
             else => {
-                // For const, var, etc - just execute
-                interpreter.evalStmt(stmt) catch {
-                    std.process.exit(1);
-                };
+                // For const, var, func_decl, etc - just execute
+                _ = try interpreter.evalStmt(stmt); // Discard the optional return value
             },
         }
     }

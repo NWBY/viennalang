@@ -72,8 +72,8 @@ pub const Parser = struct {
                 // 1. Parse expression
                 const expr = try self.parseExpression();
 
-                if (expr.* != .assignment) {
-                    self.reportError("Expected assignment expression");
+                if (expr.* != .assignment and expr.* != .call) {
+                    self.reportError("Expected assignment expression or function call");
                     return ParserError.ExpectedAssignment;
                 }
 

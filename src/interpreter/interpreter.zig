@@ -32,6 +32,7 @@ pub const Interpreter = struct {
 
     pub fn deinit(self: *Interpreter) void {
         self.environment.deinit(); // Clean up
+        self.functions.deinit();
     }
 
     pub fn evalExpr(self: *Interpreter, expr: *const ast.Expr) InterpreterError!Value {
@@ -75,13 +76,14 @@ pub const Interpreter = struct {
                 var arg_values = try std.ArrayList(Value).initCapacity(self.allocator, call.arguments.len);
                 for (call.arguments) |arg_expr| {
                     const arg_value = try self.evalExpr(arg_expr);
-                    try arg_values.append(arg_value);
+                    try arg_values.append(self.allocator, arg_value);
                 }
 
                 // Save reference to current environment
                 const old_environment = self.environment;
                 // Create new environment for function scope
                 var new_environment = std.StringHashMap(Variable).init(self.allocator);
+                defer new_environment.deinit();
                 self.environment = new_environment;
 
                 // Bind parameters to argument values
@@ -95,14 +97,19 @@ pub const Interpreter = struct {
                 // Execute function body
                 var return_value: ?Value = null;
                 for (function.body) |stmt| {
-                    // How do you detect if this statement is a return?
-                    // You'll need to modify evalStmt or create a new method
-                    try self.evalStmt(stmt);
+                    const stmt_result = try self.evalStmt(stmt);
+                    if (stmt_result) |value| {
+                        // Return statement encountered - break out early
+                        return_value = value;
+                        break;
+                    }
                 }
 
                 // Restore old environment
-                new_environment.deinit(); // Clean up function's environment
                 self.environment = old_environment;
+
+                // Return the value (or null/default if no return statement)
+                return return_value orelse Value{ .null_value = {} };
             },
         };
     }
@@ -133,7 +140,7 @@ pub const Interpreter = struct {
         return Value{ .int = result };
     }
 
-    pub fn evalStmt(self: *Interpreter, stmt: *ast.Stmt) InterpreterError!void {
+    pub fn evalStmt(self: *Interpreter, stmt: *ast.Stmt) InterpreterError!?Value {
         switch (stmt.*) {
             .const_decl => |decl| {
                 if (self.environment.contains(decl.name)) {
@@ -148,6 +155,9 @@ pub const Interpreter = struct {
                     .value = value,
                     .is_const = true,
                 });
+
+                // return null and continue evaluation
+                return null;
             },
             .var_decl => |decl| {
                 if (self.environment.contains(decl.name)) {
@@ -162,10 +172,16 @@ pub const Interpreter = struct {
                     .value = value,
                     .is_const = false,
                 });
+
+                // return null and continue evaluation
+                return null;
             },
             .expr_stmt => |expr_stmt| {
                 // Just evaluate the expression and throw away the result
                 _ = try self.evalExpr(&expr_stmt.expr);
+
+                // return null and continue evaluation
+                return null;
             },
             .func_decl => |func_decl| {
                 if (self.functions.contains(func_decl.name)) {
@@ -177,9 +193,17 @@ pub const Interpreter = struct {
                     .return_type = func_decl.return_type,
                     .body = func_decl.body,
                 });
+
+                // return null and continue evaluation
+                return null;
             },
-            .return_stmt => {
-                return InterpreterError.NotImplemented;
+            .return_stmt => |return_stmt| {
+                if (return_stmt.value) |ret_expr| {
+                    const value = try self.evalExpr(&ret_expr);
+                    return value; // Return the value (signals early exit)
+                } else {
+                    return Value{ .null_value = {} }; // return; with no value
+                }
             },
         }
     }
