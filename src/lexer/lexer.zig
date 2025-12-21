@@ -39,10 +39,36 @@ pub const Lexer = struct {
             '*' => return self.makeToken(TokenType.STAR),
             '/' => return self.makeToken(TokenType.SLASH),
             ';' => return self.makeToken(TokenType.SEMICOLON),
-            '=' => return self.makeToken(TokenType.ASSIGN),
+            '=' => {
+                if (self.peek() == '=') {
+                    _ = self.advance();
+                    return self.makeToken(TokenType.DOUBLE_EQUAL);
+                }
+                return self.makeToken(TokenType.ASSIGN);
+            },
             ',' => return self.makeToken(TokenType.COMMA),
             ':' => return self.makeToken(TokenType.COLON),
-            '>' => return self.makeToken(TokenType.GREATER),
+            '>' => {
+                if (self.peek() == '=') {
+                    _ = self.advance();
+                    return self.makeToken(TokenType.GREATER_THAN_EQUAL);
+                }
+                return self.makeToken(TokenType.GREATER_THAN);
+            },
+            '<' => {
+                if (self.peek() == '=') {
+                    _ = self.advance();
+                    return self.makeToken(TokenType.LESS_THAN_EQUAL);
+                }
+                return self.makeToken(TokenType.LESS_THAN);
+            },
+            '!' => {
+                if (self.peek() == '=') {
+                    _ = self.advance();
+                    return self.makeToken(TokenType.NOT_EQUAL);
+                }
+                return self.makeToken(TokenType.BANG);
+            },
             else => {},
         }
 

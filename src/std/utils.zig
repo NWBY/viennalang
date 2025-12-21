@@ -9,8 +9,9 @@ pub fn print(_: *Interpreter, arguments: []const Value) InterpreterError!Value {
     }
 
     const argument = arguments[0];
+    std.debug.print("vienna output: ", .{});
     argument.print();
-    std.debug.print("\n", .{});
+    std.debug.print("\n\n", .{});
 
     return Value{ .null_value = {} };
 }

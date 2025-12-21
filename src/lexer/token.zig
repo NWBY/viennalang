@@ -21,6 +21,14 @@ pub const TokenType = enum {
     SEMICOLON,
     GREATER,
 
+    // Comparisons
+    DOUBLE_EQUAL,
+    NOT_EQUAL,
+    GREATER_THAN,
+    LESS_THAN,
+    GREATER_THAN_EQUAL,
+    LESS_THAN_EQUAL,
+
     // Delimiters
     LPAREN,
     RPAREN,
@@ -31,6 +39,7 @@ pub const TokenType = enum {
 
     // Other
     IDENT,
+    BANG,
     EOF,
 };
 

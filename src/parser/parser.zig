@@ -481,6 +481,12 @@ fn tokenTypeToBinaryOp(token_type: TokenType) ast.BinaryOp {
         TokenType.MINUS => ast.BinaryOp.Subtract,
         TokenType.STAR => ast.BinaryOp.Multiply,
         TokenType.SLASH => ast.BinaryOp.Divide,
+        TokenType.DOUBLE_EQUAL => ast.BinaryOp.DoubleEqual,
+        TokenType.NOT_EQUAL => ast.BinaryOp.NotEqual,
+        TokenType.GREATER_THAN => ast.BinaryOp.GreaterThan,
+        TokenType.LESS_THAN => ast.BinaryOp.LessThan,
+        TokenType.GREATER_THAN_EQUAL => ast.BinaryOp.GreaterThanEqual,
+        TokenType.LESS_THAN_EQUAL => ast.BinaryOp.LessThanEqual,
         else => unreachable,
     };
 }

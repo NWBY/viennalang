@@ -38,6 +38,12 @@ pub const BinaryOp = enum {
     Subtract,
     Multiply,
     Divide,
+    DoubleEqual,
+    NotEqual,
+    GreaterThan,
+    LessThan,
+    GreaterThanEqual,
+    LessThanEqual,
 };
 
 pub const AssignExpr = struct {
