@@ -2,6 +2,7 @@
 const std = @import("std");
 const ast = @import("../parser/ast.zig");
 const Value = @import("value.zig").Value;
+const stdLibUtils = @import("../std/utils.zig");
 
 // Explicitly define possible errors
 pub const InterpreterError = error{ TypeError, DivisionByZero, NotImplemented, UndefinedVariable, OutOfMemory, CannotReassignConst, VariableAlreadyDeclared, FunctionAlreadyDeclared, UndefinedFunction, ArgumentCountMismatch };
@@ -17,22 +18,36 @@ pub const Function = struct {
     body: []*ast.Stmt,
 };
 
+// Standard library function signature: takes interpreter, arguments, returns Value or error
+pub const StdLibFunction = *const fn (*Interpreter, []const Value) InterpreterError!Value;
+
 pub const Interpreter = struct {
     allocator: std.mem.Allocator,
     environment: std.StringHashMap(Variable),
     functions: std.StringHashMap(Function),
+    std_lib_functions: std.StringHashMap(StdLibFunction),
 
-    pub fn init(allocator: std.mem.Allocator) Interpreter {
-        return Interpreter{
+    pub fn init(allocator: std.mem.Allocator) !Interpreter {
+        var interpreter = Interpreter{
             .allocator = allocator,
             .environment = std.StringHashMap(Variable).init(allocator),
             .functions = std.StringHashMap(Function).init(allocator),
+            .std_lib_functions = std.StringHashMap(StdLibFunction).init(allocator),
         };
+
+        try interpreter.registerStdLibFunction("print", stdLibUtils.print);
+
+        return interpreter;
     }
 
     pub fn deinit(self: *Interpreter) void {
         self.environment.deinit(); // Clean up
         self.functions.deinit();
+        self.std_lib_functions.deinit();
+    }
+
+    fn registerStdLibFunction(self: *Interpreter, name: []const u8, function: StdLibFunction) !void {
+        try self.std_lib_functions.put(name, function);
     }
 
     pub fn evalExpr(self: *Interpreter, expr: *const ast.Expr) InterpreterError!Value {
@@ -63,6 +78,18 @@ pub const Interpreter = struct {
                 return value;
             },
             .call => |call| {
+                if (self.std_lib_functions.get(call.name)) |function| {
+                    // Evaluate arguments first (same pattern as user-defined functions)
+                    var arg_values = try std.ArrayList(Value).initCapacity(self.allocator, call.arguments.len);
+                    for (call.arguments) |arg_expr| {
+                        const arg_value = try self.evalExpr(arg_expr);
+                        try arg_values.append(self.allocator, arg_value);
+                    }
+
+                    // Now call with evaluated values
+                    return try function(self, arg_values.items);
+                }
+
                 if (!self.functions.contains(call.name)) {
                     return InterpreterError.UndefinedFunction;
                 }

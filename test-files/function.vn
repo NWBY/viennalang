@@ -11,4 +11,6 @@ func noReturn() {
     const x = 5;
 }
 
-add(10, 20);
+const res = add(10, 20);
+
+print(res);

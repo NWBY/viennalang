@@ -47,7 +47,10 @@ pub fn main() !void {
     // Parse and execute
     var lexer = Lexer.init(source);
     var parser = Parser.init(allocator, &lexer);
-    var interpreter = Interpreter.init(allocator);
+    var interpreter = Interpreter.init(allocator) catch {
+        std.debug.print("Error: Failed to initialize interpreter\n", .{});
+        std.process.exit(1);
+    };
 
     while (!parser.currentTokenIs(TokenType.EOF)) {
         const stmt = parser.parseStatement() catch {
@@ -60,29 +63,15 @@ pub fn main() !void {
                 const result_expr = interpreter.evalExpr(&expr_stmt.expr) catch {
                     std.process.exit(1);
                 };
-                // Print the result
-                result_expr.print();
-                std.debug.print("\n", .{});
+                // Only print result if it's NOT a function call
+                // (function calls might have side effects and print things themselves)
+                if (expr_stmt.expr != .call) {
+                    result_expr.print();
+                    std.debug.print("\n", .{});
+                }
             },
-            .func_decl => |func_decl| {
-                // NEW: Print function declaration info for testing
-                std.debug.print("✓ Parsed function: {s}(", .{func_decl.name});
-
-                // Print parameters
-                for (func_decl.parameters, 0..) |param, i| {
-                    if (i > 0) std.debug.print(", ", .{});
-                    std.debug.print("{s}: {s}", .{ param.name, param.type_annotation orelse "?" });
-                }
-
-                std.debug.print(")", .{});
-
-                // Print return type
-                if (func_decl.return_type) |ret_type| {
-                    std.debug.print(" -> {s}", .{ret_type});
-                }
-
-                // Print body info
-                std.debug.print(" {{ {d} statement(s) }}\n", .{func_decl.body.len});
+            .func_decl => {
+                _ = try interpreter.evalStmt(stmt);
             },
             else => {
                 // For const, var, func_decl, etc - just execute
