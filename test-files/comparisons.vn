@@ -1,0 +1,9 @@
+const age = 5;
+
+print(age == 5);
+print(age == 4);
+
+const name = "Sam";
+
+print(name == "Sam");
+print(name == "Courtney");

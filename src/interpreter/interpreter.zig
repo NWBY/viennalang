@@ -146,25 +146,50 @@ pub const Interpreter = struct {
         const left = try self.evalExpr(binary.left);
         const right = try self.evalExpr(binary.right);
 
-        // Both sides must be integers for now
-        if (left != .int or right != .int) {
-            return InterpreterError.TypeError;
+        // Handle integer operations
+        if (left == .int and right == .int) {
+            const left_val = left.int;
+            const right_val = right.int;
+
+            return switch (binary.operator) {
+                .Add => Value{ .int = left_val + right_val },
+                .Subtract => Value{ .int = left_val - right_val },
+                .Multiply => Value{ .int = left_val * right_val },
+                .Divide => blk: {
+                    if (right_val == 0) return InterpreterError.DivisionByZero;
+                    break :blk Value{ .int = @divTrunc(left_val, right_val) };
+                },
+                .DoubleEqual => Value{ .bool = left_val == right_val },
+                .NotEqual => Value{ .bool = left_val != right_val },
+                .GreaterThan => Value{ .bool = left_val > right_val },
+                .LessThan => Value{ .bool = left_val < right_val },
+                .GreaterThanEqual => Value{ .bool = left_val >= right_val },
+                .LessThanEqual => Value{ .bool = left_val <= right_val },
+            };
         }
 
-        // Perform the operation
-        const result = switch (binary.operator) {
-            .Add => left.int + right.int,
-            .Subtract => left.int - right.int,
-            .Multiply => left.int * right.int,
-            .Divide => blk: {
-                if (right.int == 0) {
-                    return InterpreterError.DivisionByZero;
-                }
-                break :blk @divTrunc(left.int, right.int);
-            },
-        };
+        // Handle string comparisons
+        if (left == .string and right == .string) {
+            const left_str = left.string;
+            const right_str = right.string;
 
-        return Value{ .int = result };
+            return switch (binary.operator) {
+                .DoubleEqual => Value{ .bool = std.mem.eql(u8, left_str, right_str) },
+                .NotEqual => Value{ .bool = !std.mem.eql(u8, left_str, right_str) },
+                else => return InterpreterError.TypeError,
+            };
+        }
+
+        // Handle boolean comparisons
+        if (left == .bool and right == .bool) {
+            return switch (binary.operator) {
+                .DoubleEqual => Value{ .bool = left.bool == right.bool },
+                .NotEqual => Value{ .bool = left.bool != right.bool },
+                else => return InterpreterError.TypeError,
+            };
+        }
+
+        return InterpreterError.TypeError;
     }
 
     pub fn evalStmt(self: *Interpreter, stmt: *ast.Stmt) InterpreterError!?Value {

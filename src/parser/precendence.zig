@@ -16,7 +16,6 @@ pub fn getTokenPrecedence(token_type: TokenType) Precedence {
         TokenType.STAR, TokenType.SLASH => Precedence.PRODUCT,
         TokenType.DOUBLE_EQUAL, TokenType.NOT_EQUAL => Precedence.EQUALITY,
         TokenType.GREATER_THAN, TokenType.LESS_THAN, TokenType.GREATER_THAN_EQUAL, TokenType.LESS_THAN_EQUAL => Precedence.COMPARISON,
-        TokenType.GREATER_THAN_EQUAL, TokenType.LESS_THAN_EQUAL => Precedence.COMPARISON,
         else => Precedence.LOWEST,
     };
 }
