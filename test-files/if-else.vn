@@ -1,0 +1,7 @@
+const name = "Sam";
+
+if (name == "Sam") {
+    print("Name is Sam!");
+} else {
+    print("Name is not Sam");
+}

@@ -257,6 +257,32 @@ pub const Interpreter = struct {
                     return Value{ .null_value = {} }; // return; with no value
                 }
             },
+            .if_stmt => |if_stmt| {
+                const condition = try self.evalExpr(&if_stmt.condition);
+                if (condition != .bool) {
+                    return InterpreterError.TypeError;
+                }
+                if (condition.bool) {
+                    for (if_stmt.then_branch) |then_stmt| {
+                        const stmt_result = try self.evalStmt(then_stmt);
+                        if (stmt_result) |value| {
+                            return value;
+                        } else {
+                            return null;
+                        }
+                    }
+                } else {
+                    if (if_stmt.else_branch) |else_branch| {
+                        for (else_branch) |else_stmt| {
+                            const stmt_result = try self.evalStmt(else_stmt);
+                            if (stmt_result) |value| {
+                                return value;
+                            }
+                        }
+                    }
+                }
+                return null;
+            },
         }
     }
 

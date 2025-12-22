@@ -58,6 +58,7 @@ pub const Stmt = union(enum) {
     return_stmt: ReturnStmt,
     expr_stmt: ExprStmt,
     func_decl: FuncDecl,
+    if_stmt: IfStmt,
 };
 
 pub const ConstDecl = struct {
@@ -85,6 +86,12 @@ pub const FuncDecl = struct {
     return_type: ?[]const u8,
     parameters: []const Parameter,
     body: []*Stmt,
+};
+
+pub const IfStmt = struct {
+    condition: Expr,
+    then_branch: []*Stmt,
+    else_branch: ?[]*Stmt,
 };
 
 pub const Parameter = struct {

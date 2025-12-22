@@ -68,6 +68,7 @@ pub const Parser = struct {
             TokenType.VAR => return try self.parseVarDeclaration(),
             TokenType.FUNC => return try self.parseFuncDeclaration(),
             TokenType.RETURN => return try self.parseReturnStatement(),
+            TokenType.IF => return try self.parseIfStatement(),
             else => {
                 // 1. Parse expression
                 const expr = try self.parseExpression();
@@ -472,6 +473,53 @@ pub const Parser = struct {
         self.nextToken(); // consume right parenthesis
 
         return arguments.items;
+    }
+
+    fn parseIfStatement(self: *Parser) ParserError!*ast.Stmt {
+        self.nextToken(); // consume if
+
+        if (!self.currentTokenIs(TokenType.LPAREN)) {
+            self.reportError("Expected '(' after if condition");
+            return ParserError.ExpectedLeftParen;
+        }
+        self.nextToken(); // consume left parenthesis
+
+        const condition = try self.parseExpression();
+        if (!self.currentTokenIs(TokenType.RPAREN)) {
+            self.reportError("Expected ')' after if condition");
+            return ParserError.ExpectedRightParen;
+        }
+        self.nextToken(); // consume right parenthesis
+
+        if (!self.currentTokenIs(TokenType.LBRACE)) {
+            self.reportError("Expected '{' after if condition");
+            return ParserError.ExpectedLeftBrace;
+        }
+        self.nextToken(); // consume left brace
+
+        const then_branch = try self.parseBlock(); // parse block consumes the right brace
+
+        var else_branch: ?[]*ast.Stmt = null;
+
+        if (self.currentTokenIs(TokenType.ELSE)) {
+            self.nextToken(); // consume else
+            if (!self.currentTokenIs(TokenType.LBRACE)) {
+                self.reportError("Expected '{' after else");
+                return ParserError.ExpectedLeftBrace;
+            }
+            self.nextToken(); // consume left brace
+            else_branch = try self.parseBlock(); // parse block consumes the right brace
+        }
+
+        const stmt = try self.allocator.create(ast.Stmt);
+        stmt.* = ast.Stmt{
+            .if_stmt = ast.IfStmt{
+                .condition = condition.*,
+                .then_branch = then_branch,
+                .else_branch = else_branch,
+            },
+        };
+        return stmt;
     }
 };
 
