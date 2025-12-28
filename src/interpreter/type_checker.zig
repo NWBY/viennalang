@@ -10,6 +10,8 @@ pub const TypeCheckerError = error{
     InfiniteLoop,
     UnexpectedEOF,
     UnexpectedToken,
+    UndefinedFunction,
+    ArgumentCountMismatch,
 };
 
 pub const Type = enum {
@@ -60,9 +62,10 @@ pub const TypeChecker = struct {
             .string_literal => return Type.String,
             .bool_literal => return Type.Bool,
             .identifier => |ident| {
-                if (self.environment.get(ident.name)) |type| {
-                    return type;
+                if (self.environment.get(ident.name)) |ident_type| {
+                    return ident_type;
                 }
+                return TypeCheckerError.UndefinedVariable;
             },
             .binary => |bin| {
                 const left_type = try self.inferExprType(bin.left);
@@ -70,16 +73,39 @@ pub const TypeChecker = struct {
                 if (left_type != right_type) {
                     return TypeCheckerError.TypeMismatch;
                 }
+
+                const is_comparison = switch (bin.operator) {
+                    .DoubleEqual, .NotEqual, .GreaterThan, .LessThan, .GreaterThanEqual, .LessThanEqual => true,
+                    else => false,
+                };
+
+                if (is_comparison) {
+                    return Type.Bool;
+                }
+
                 return left_type;
             },
             .assignment => |assign| {
                 const value_type = try self.inferExprType(assign.value);
-                if (self.environment.get(assign.name)) |type| {
-                    if (type != value_type) {
+                if (self.environment.get(assign.name)) |assign_type| {
+                    if (assign_type != value_type) {
                         return TypeCheckerError.TypeMismatch;
                     }
+                } else {
+                    return TypeCheckerError.UndefinedVariable;
                 }
                 return value_type;
+            },
+            .call => |call| {
+                if (!self.functions.contains(call.name)) {
+                    return TypeCheckerError.UndefinedFunction;
+                }
+
+                const function = self.functions.getPtr(call.name).?;
+                if (function.parameters.len != call.arguments.len) {
+                    return TypeCheckerError.ArgumentCountMismatch;
+                }
+                return function.return_type;
             },
         }
     }
