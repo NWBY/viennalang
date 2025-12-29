@@ -372,7 +372,7 @@ pub const Parser = struct {
     }
 
     fn parseReturnType(self: *Parser) ParserError!?[]const u8 {
-        if (!self.currentTokenIs(TokenType.MINUS) or !self.peekTokenIs(TokenType.GREATER)) {
+        if (!self.currentTokenIs(TokenType.MINUS) or !self.peekTokenIs(TokenType.GREATER_THAN)) {
             return null;
         }
         self.nextToken(); // consume -

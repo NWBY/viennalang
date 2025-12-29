@@ -3,6 +3,7 @@ const Lexer = @import("lexer/lexer.zig").Lexer;
 const Parser = @import("parser/parser.zig").Parser;
 const Interpreter = @import("interpreter/interpreter.zig").Interpreter;
 const TokenType = @import("lexer/token.zig").TokenType;
+const TypeChecker = @import("interpreter/type_checker.zig").TypeChecker;
 const ast = @import("parser/ast.zig");
 
 pub fn main() !void {
@@ -51,9 +52,16 @@ pub fn main() !void {
         std.debug.print("Error: Failed to initialize interpreter\n", .{});
         std.process.exit(1);
     };
+    var type_checker = TypeChecker.init(allocator);
+    defer type_checker.deinit();
 
     while (!parser.currentTokenIs(TokenType.EOF)) {
         const stmt = parser.parseStatement() catch {
+            std.process.exit(1);
+        };
+
+        type_checker.checkStmt(stmt, null) catch |err| {
+            std.debug.print("Type error: {}\n", .{err});
             std.process.exit(1);
         };
 
