@@ -1,0 +1,43 @@
+{
+  "name": "vienna-lang",
+  "displayName": "Vienna Language",
+  "description": "Syntax highlighting for Vienna language files",
+  "version": "0.0.1",
+  "engines": {
+    "vscode": "^1.74.0"
+  },
+  "categories": [
+    "Programming Languages"
+  ],
+  "contributes": {
+    "languages": [
+      {
+        "id": "vienna",
+        "aliases": [
+          "Vienna",
+          "vienna"
+        ],
+        "extensions": [
+          ".vn"
+        ],
+        "configuration": "./language-configuration.json"
+      }
+    ],
+    "grammars": [
+      {
+        "language": "vienna",
+        "scopeName": "source.vienna",
+        "path": "./syntaxes/vienna.tmLanguage.json"
+      }
+    ]
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/yourusername/vienna-lang"
+  },
+  "license": "MIT"
+}
+
+
+
+

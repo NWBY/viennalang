@@ -1,0 +1,188 @@
+{
+  "$schema": "https://raw.githubusercontent.com/martinring/tmlanguage/master/tmlanguage.json",
+  "name": "Vienna",
+  "patterns": [
+    {
+      "include": "#comments"
+    },
+    {
+      "include": "#keywords"
+    },
+    {
+      "include": "#types"
+    },
+    {
+      "include": "#generic-types"
+    },
+    {
+      "include": "#literals"
+    },
+    {
+      "include": "#operators"
+    },
+    {
+      "include": "#function-calls"
+    },
+    {
+      "include": "#method-calls"
+    },
+    {
+      "include": "#identifiers"
+    }
+  ],
+  "repository": {
+    "comments": {
+      "patterns": [
+        {
+          "name": "comment.line.double-slash.vienna",
+          "begin": "//",
+          "end": "$"
+        }
+      ]
+    },
+    "keywords": {
+      "patterns": [
+        {
+          "name": "keyword.control.vienna",
+          "match": "\\b(if|else|return)\\b"
+        },
+        {
+          "name": "keyword.declaration.vienna",
+          "match": "\\b(const|var|func|struct)\\b"
+        },
+        {
+          "name": "variable.language.self.vienna",
+          "match": "\\bself\\b"
+        }
+      ]
+    },
+    "types": {
+      "patterns": [
+        {
+          "name": "storage.type.vienna",
+          "match": "\\b(int|string|void|bool|JSON|Error|Request|Response|User|Database|Server|Optional|Result)\\b"
+        }
+      ]
+    },
+    "generic-types": {
+      "patterns": [
+        {
+          "name": "meta.type.vienna",
+          "begin": "\\b(Optional|Result)\\s*<",
+          "beginCaptures": {
+            "1": {
+              "name": "storage.type.vienna"
+            }
+          },
+          "end": ">",
+          "patterns": [
+            {
+              "include": "#types"
+            },
+            {
+              "name": "punctuation.separator.type.vienna",
+              "match": ","
+            }
+          ]
+        }
+      ]
+    },
+    "literals": {
+      "patterns": [
+        {
+          "name": "constant.language.boolean.vienna",
+          "match": "\\b(true|false)\\b"
+        },
+        {
+          "name": "constant.language.null.vienna",
+          "match": "\\bnull\\b"
+        },
+        {
+          "name": "constant.numeric.integer.vienna",
+          "match": "\\b\\d+\\b"
+        },
+        {
+          "name": "string.quoted.double.vienna",
+          "begin": "\"",
+          "end": "\"",
+          "patterns": [
+            {
+              "name": "constant.character.escape.vienna",
+              "match": "\\\\."
+            }
+          ]
+        }
+      ]
+    },
+    "operators": {
+      "patterns": [
+        {
+          "name": "keyword.operator.arrow.vienna",
+          "match": "->"
+        },
+        {
+          "name": "keyword.operator.comparison.vienna",
+          "match": "==|!=|<=|>="
+        },
+        {
+          "name": "keyword.operator.arithmetic.vienna",
+          "match": "[+\\-*/]"
+        },
+        {
+          "name": "keyword.operator.assignment.vienna",
+          "match": "="
+        },
+        {
+          "name": "keyword.operator.comparison.vienna",
+          "match": "[><]"
+        },
+        {
+          "name": "punctuation.accessor.vienna",
+          "match": "\\."
+        }
+      ]
+    },
+    "function-calls": {
+      "patterns": [
+        {
+          "name": "entity.name.function.vienna",
+          "match": "\\b(Ok|Err|new|get|set|json|value|error|isErr|isOk|length|object|json)\\s*\\(",
+          "captures": {
+            "1": {
+              "name": "entity.name.function.vienna"
+            }
+          }
+        }
+      ]
+    },
+    "method-calls": {
+      "patterns": [
+        {
+          "name": "meta.method-call.vienna",
+          "begin": "\\b[a-zA-Z_][a-zA-Z0-9_]*\\s*\\.",
+          "beginCaptures": {
+            "0": {
+              "name": "variable.other.vienna"
+            }
+          },
+          "end": "(?=\\s|;|,|\\)|\\}|\\[)",
+          "patterns": [
+            {
+              "name": "entity.name.function.vienna",
+              "match": "\\b[a-zA-Z_][a-zA-Z0-9_]*"
+            }
+          ]
+        }
+      ]
+    },
+    "identifiers": {
+      "patterns": [
+        {
+          "name": "variable.other.vienna",
+          "match": "\\b[a-zA-Z_][a-zA-Z0-9_]*\\b"
+        }
+      ]
+    }
+  },
+  "scopeName": "source.vienna"
+}
