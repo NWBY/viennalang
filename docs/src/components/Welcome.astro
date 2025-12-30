@@ -1,0 +1,29 @@
+---
+import { Code } from "astro:components";
+const code = `const name: string = "Sam";
+
+func sayHello(name: string) -> void {
+    print(name);
+}
+
+sayHello(name);
+`;
+---
+
+<div class="max-w-3xl mx-auto py-20">
+  <h1 class="text-6xl font-bold mb-4 text-[#27fb6b]">Vienna</h1>
+  <p class="text-gray-400 text-lg mb-6">
+    Vienna is an experimental programming language
+  </p>
+
+  <a
+    href="https://github.com/NWBY/viennalang"
+    class="bg-[#27fb6b] hover:bg-[#27fb6b]/80 transition-all duration-300 text-neutral-950 px-4 py-2"
+  >
+    Star on GitHub
+  </a>
+
+  <p class="text-gray-400 text-lg mt-10 mb-2">Proposed syntax</p>
+
+  <Code code={code} class={"p-4"} theme="dark-plus" lang="ts" />
+</div>

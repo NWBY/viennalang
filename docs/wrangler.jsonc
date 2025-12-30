@@ -1,0 +1,13 @@
+{
+    "name": "vienna-docs",
+    "compatibility_date": "2025-12-30",
+    "assets": {
+        "directory": "./dist"
+    },
+    "routes": [
+        {
+            "pattern": "viennalang.com",
+            "custom_domain": true
+        }
+    ]
+}
