@@ -1,6 +1,6 @@
 import { useState } from 'react';
 
-interface Milestone {
+export interface Milestone {
   hash: string;
   shortHash: string;
   message: string;
@@ -9,120 +9,9 @@ interface Milestone {
   description?: string;
 }
 
-const milestones: Milestone[] = [
-  {
-    hash: '7058b0fde6b864b562c6fb3376533b17968db1c8',
-    shortHash: '7058b0f',
-    message: 'Type Checker',
-    date: '2025-12-29',
-    type: 'feature',
-    description: 'Introduced static type checking to catch type errors at compile time'
-  },
-  {
-    hash: 'd3e98d2d2491f6f3d5ff2fb0d16c190441036fed',
-    shortHash: 'd3e98d2',
-    message: 'If-Else Statements',
-    date: '2025-12-22',
-    type: 'feature',
-    description: 'Added conditional branching with if-else statements'
-  },
-  {
-    hash: 'a83aa41182889fa9d6e32bcb5c8a519e00c60bb4',
-    shortHash: 'a83aa41',
-    message: 'Comparison Operators',
-    date: '2025-12-21',
-    type: 'feature',
-    description: 'Implemented comparison operators (==, !=, <, >, <=, >=)'
-  },
-  {
-    hash: 'b9b6ba263fa7518f460617612ea7b48f048e7213',
-    shortHash: 'b9b6ba2',
-    message: 'Print Function (Standard Library)',
-    date: '2025-12-21',
-    type: 'feature',
-    description: 'Added the print() function as the first standard library function'
-  },
-  {
-    hash: 'c55cbafab19592f7d54113872d9a6e852094d592',
-    shortHash: 'c55cbaf',
-    message: 'Functions',
-    date: '2025-12-18',
-    type: 'feature',
-    description: 'Full support for function definitions and calls with parameters'
-  },
-  {
-    hash: '13fedf7a0b488d5608c8123fda284ab3649499b8',
-    shortHash: '13fedf7',
-    message: 'Constants',
-    date: '2025-12-15',
-    type: 'feature',
-    description: 'Added const keyword for immutable variable declarations'
-  },
-  {
-    hash: 'eb91fedce813780ab3111dde70d7f48edc7a73a8',
-    shortHash: 'eb91fed',
-    message: 'File Execution',
-    date: '2025-12-15',
-    type: 'milestone',
-    description: 'Vienna can now parse and evaluate .vn files directly'
-  },
-  {
-    hash: 'c08445f9ce8d2c78cba7a65b8702289f5614cfdc',
-    shortHash: 'c08445f',
-    message: 'Interpreter',
-    date: '2025-12-15',
-    type: 'milestone',
-    description: 'The interpreter is working! Vienna can now execute code'
-  },
-  {
-    hash: 'baea38ef8278abcf0a8c3682683b633dfa1c6ee4',
-    shortHash: 'baea38e',
-    message: 'Operator Precedence',
-    date: '2025-12-15',
-    type: 'improvement',
-    description: 'Added proper operator precedence to the parser'
-  },
-  {
-    hash: '62dde35e6ab0c7f98cd5b463a3a75ac10bd49286',
-    shortHash: '62dde35',
-    message: 'String & Boolean Literals',
-    date: '2025-12-14',
-    type: 'feature',
-    description: 'Parser now supports string and boolean literal parsing'
-  },
-  {
-    hash: '588266cf1c96150fb6839f52530dd342273b5c32',
-    shortHash: '588266c',
-    message: 'Integer Literals',
-    date: '2025-12-14',
-    type: 'feature',
-    description: 'Parser now supports integer literal parsing'
-  },
-  {
-    hash: 'f38948bf30fb13882bf70886d440e8413eb84391',
-    shortHash: 'f38948b',
-    message: 'Parser Foundation',
-    date: '2025-12-14',
-    type: 'milestone',
-    description: 'Basic parser implementation started'
-  },
-  {
-    hash: '183ec2aefd82fc5fc7f836c7efc9c7bc90184211',
-    shortHash: '183ec2a',
-    message: 'Lexer Complete',
-    date: '2025-12-14',
-    type: 'milestone',
-    description: 'The lexer is fully functional and can tokenize Vienna source code'
-  },
-  {
-    hash: 'a240fba0541a7f3ed8a8e272d5f611db67a8b8fe',
-    shortHash: 'a240fba',
-    message: 'Initial Commit',
-    date: '2025-12-14',
-    type: 'milestone',
-    description: 'The Vienna programming language project begins!'
-  }
-];
+interface TimelineProps {
+  milestones: Milestone[];
+}
 
 const GITHUB_REPO = 'https://github.com/NWBY/viennalang';
 
@@ -161,7 +50,7 @@ function formatDate(dateStr: string) {
   });
 }
 
-export default function Timeline() {
+export default function Timeline({ milestones }: TimelineProps) {
   const [filter, setFilter] = useState<'all' | 'feature' | 'milestone' | 'improvement'>('all');
 
   const filteredMilestones = filter === 'all' 

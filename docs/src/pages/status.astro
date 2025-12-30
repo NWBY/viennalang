@@ -1,6 +1,7 @@
 ---
 import Layout from "../layouts/Layout.astro";
 import Timeline from "../components/Timeline";
+import milestones from "../data/milestones.json";
 ---
 
 <Layout title="Development Status - Vienna">
@@ -25,6 +26,6 @@ import Timeline from "../components/Timeline";
       </div>
     </nav>
     
-    <Timeline client:load />
+    <Timeline client:load milestones={milestones} />
   </div>
 </Layout>
