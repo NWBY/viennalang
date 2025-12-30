@@ -135,7 +135,7 @@ export default function Timeline({ milestones }: TimelineProps) {
       {/* Timeline */}
       <div className="relative">
         {/* Vertical Line */}
-        <div className="absolute left-4 top-0 bottom-0 w-0.5 bg-gradient-to-b from-[#27fb6b] via-purple-500 to-gray-700"></div>
+        <div className="absolute left-4 top-0 bottom-0 w-0.5 bg-neutral-700"></div>
 
         <div className="space-y-8">
           {filteredMilestones.map((milestone, index) => (
