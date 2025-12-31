@@ -1,8 +1,12 @@
 ---
 import Welcome from "../components/Welcome.astro";
 import Layout from "../layouts/Layout.astro";
+import Navbar from "../components/Navbar.astro";
 ---
 
 <Layout>
-  <Welcome />
+  <div class="min-h-screen">
+    <Navbar />
+    <Welcome />
+  </div>
 </Layout>

@@ -1,0 +1,14 @@
+---
+import Layout from "../layouts/Layout.astro";
+import Timeline from "../components/Timeline";
+import milestones from "../data/milestones.json";
+import Navbar from "../components/Navbar.astro";
+---
+
+<Layout title="Development Status - Vienna">
+  <div class="min-h-screen">
+    <Navbar />
+
+    <Timeline client:load milestones={milestones} />
+  </div>
+</Layout>
