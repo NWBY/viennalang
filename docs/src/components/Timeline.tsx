@@ -60,16 +60,16 @@ export default function Timeline({ milestones }: TimelineProps) {
   return (
     <div className="max-w-4xl mx-auto py-12 px-4">
       <div className="mb-12">
-        <h1 className="text-5xl font-bold mb-4 text-[#ff6b2b]">Development Status</h1>
-        <p className="text-gray-400 text-lg mb-8">
+        <h1 className="text-3xl sm:text-5xl font-bold mb-4 text-[#ff6b2b]">Development Status</h1>
+        <p className="text-gray-400 text-base sm:text-lg mb-6 sm:mb-8">
           Track the progress of Vienna's development. Each milestone represents a significant step forward in building this experimental programming language.
         </p>
         
         {/* Filter Buttons */}
-        <div className="flex flex-wrap gap-3 mb-8">
+        <div className="flex flex-wrap gap-2 sm:gap-3 mb-6 sm:mb-8">
           <button
             onClick={() => setFilter('all')}
-            className={`px-4 py-2 rounded-lg transition-all duration-200 border ${
+            className={`px-3 sm:px-4 py-1.5 sm:py-2 text-sm sm:text-base rounded-lg transition-all duration-200 border ${
               filter === 'all'
                 ? 'bg-white/10 border-white/20 text-white'
                 : 'border-white/10 text-gray-400 hover:border-white/20 hover:text-white'
@@ -79,7 +79,7 @@ export default function Timeline({ milestones }: TimelineProps) {
           </button>
           <button
             onClick={() => setFilter('milestone')}
-            className={`px-4 py-2 rounded-lg transition-all duration-200 border ${
+            className={`px-3 sm:px-4 py-1.5 sm:py-2 text-sm sm:text-base rounded-lg transition-all duration-200 border ${
               filter === 'milestone'
                 ? 'bg-purple-500/20 border-purple-500/30 text-purple-400'
                 : 'border-white/10 text-gray-400 hover:border-purple-500/30 hover:text-purple-400'
@@ -89,7 +89,7 @@ export default function Timeline({ milestones }: TimelineProps) {
           </button>
           <button
             onClick={() => setFilter('feature')}
-            className={`px-4 py-2 rounded-lg transition-all duration-200 border ${
+            className={`px-3 sm:px-4 py-1.5 sm:py-2 text-sm sm:text-base rounded-lg transition-all duration-200 border ${
               filter === 'feature'
                 ? 'bg-[#ff6b2b]/20 border-[#ff6b2b]/30 text-[#ff6b2b]'
                 : 'border-white/10 text-gray-400 hover:border-[#ff6b2b]/30 hover:text-[#ff6b2b]'
@@ -99,7 +99,7 @@ export default function Timeline({ milestones }: TimelineProps) {
           </button>
           <button
             onClick={() => setFilter('improvement')}
-            className={`px-4 py-2 rounded-lg transition-all duration-200 border ${
+            className={`px-3 sm:px-4 py-1.5 sm:py-2 text-sm sm:text-base rounded-lg transition-all duration-200 border ${
               filter === 'improvement'
                 ? 'bg-blue-500/20 border-blue-500/30 text-blue-400'
                 : 'border-white/10 text-gray-400 hover:border-blue-500/30 hover:text-blue-400'
@@ -110,24 +110,24 @@ export default function Timeline({ milestones }: TimelineProps) {
         </div>
 
         {/* Stats */}
-        <div className="grid grid-cols-3 gap-4 mb-12">
-          <div className="bg-white/5 border border-white/10 rounded-lg p-4">
-            <div className="text-3xl font-bold text-[#ff6b2b]">
+        <div className="grid grid-cols-3 gap-2 sm:gap-4 mb-12">
+          <div className="bg-white/5 border border-white/10 rounded-lg p-3 sm:p-4">
+            <div className="text-2xl sm:text-3xl font-bold text-[#ff6b2b]">
               {milestones.filter(m => m.type === 'feature').length}
             </div>
-            <div className="text-gray-400 text-sm">Features</div>
+            <div className="text-gray-400 text-xs sm:text-sm">Features</div>
           </div>
-          <div className="bg-white/5 border border-white/10 rounded-lg p-4">
-            <div className="text-3xl font-bold text-purple-400">
+          <div className="bg-white/5 border border-white/10 rounded-lg p-3 sm:p-4">
+            <div className="text-2xl sm:text-3xl font-bold text-purple-400">
               {milestones.filter(m => m.type === 'milestone').length}
             </div>
-            <div className="text-gray-400 text-sm">Milestones</div>
+            <div className="text-gray-400 text-xs sm:text-sm">Milestones</div>
           </div>
-          <div className="bg-white/5 border border-white/10 rounded-lg p-4">
-            <div className="text-3xl font-bold text-blue-400">
+          <div className="bg-white/5 border border-white/10 rounded-lg p-3 sm:p-4">
+            <div className="text-2xl sm:text-3xl font-bold text-blue-400">
               {milestones.filter(m => m.type === 'improvement').length}
             </div>
-            <div className="text-gray-400 text-sm">Improvements</div>
+            <div className="text-gray-400 text-xs sm:text-sm">Improvements</div>
           </div>
         </div>
       </div>
@@ -137,26 +137,26 @@ export default function Timeline({ milestones }: TimelineProps) {
         {/* Vertical Line */}
         <div className="absolute left-4 top-0 bottom-0 w-0.5 bg-neutral-700"></div>
 
-        <div className="space-y-8">
+        <div className="space-y-4 sm:space-y-8">
           {filteredMilestones.map((milestone, index) => (
             <div key={milestone.hash} className="relative pl-12">
               {/* Dot */}
               <div className={`absolute left-2 top-2 w-5 h-5 rounded-full ${getTypeColor(milestone.type)} ring-4 ring-neutral-950`}></div>
 
               {/* Content Card */}
-              <div className="bg-white/5 border border-white/10 rounded-lg p-5 hover:bg-white/[0.07] hover:border-white/20 transition-all duration-200">
-                <div className="flex flex-wrap items-start justify-between gap-3 mb-3">
-                  <div className="flex flex-wrap items-center gap-3">
-                    <h3 className="text-xl font-semibold text-white">{milestone.message}</h3>
-                    <span className={`text-xs px-2 py-1 rounded-full border ${getTypeBadgeStyle(milestone.type)}`}>
+              <div className="bg-white/5 border border-white/10 rounded-lg p-4 sm:p-5 hover:bg-white/[0.07] hover:border-white/20 transition-all duration-200">
+                <div className="flex flex-wrap items-start justify-between gap-2 sm:gap-3 mb-2 sm:mb-3">
+                  <div className="flex flex-wrap items-center gap-2 sm:gap-3">
+                    <h3 className="text-lg sm:text-xl font-semibold text-white">{milestone.message}</h3>
+                    <span className={`text-xs px-2 py-0.5 sm:py-1 rounded-full border ${getTypeBadgeStyle(milestone.type)}`}>
                       {milestone.type}
                     </span>
                   </div>
-                  <span className="text-gray-500 text-sm">{formatDate(milestone.date)}</span>
+                  <span className="text-gray-500 text-xs sm:text-sm">{formatDate(milestone.date)}</span>
                 </div>
                 
                 {milestone.description && (
-                  <p className="text-gray-400 mb-4">{milestone.description}</p>
+                  <p className="text-gray-400 text-sm sm:text-base mb-3 sm:mb-4">{milestone.description}</p>
                 )}
 
                 <div className="flex items-center gap-4">
