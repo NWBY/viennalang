@@ -5,6 +5,7 @@ const TokenType = @import("../lexer/token.zig").TokenType;
 const precedence_file = @import("precendence.zig");
 const ViennaError = @import("../interpreter/error.zig").ViennaError;
 const ast = @import("ast.zig");
+const EventWriter = @import("../visualise/event_writer.zig").EventWriter;
 
 const ParserError = error{ ExpectedAssignment, ExpectedSemicolon, ExpectedEquals, UnexpectedToken, ExpectedExpression, ExpectReturnType, OutOfMemory, Overflow, InvalidCharacter, ExpectedRightBrace, ExpectedLeftBrace, ExpectedLeftParen, ExpectedRightParen, ExpectedColon, ExpectedComma, ExpectedFuncDeclaration, ExpectedFuncParameters, ExpectedFuncReturnType, ExpectedFuncBody, ExpectedCommaOrRightParen };
 
@@ -14,6 +15,7 @@ pub const Parser = struct {
     peek_token: Token,
     allocator: std.mem.Allocator,
     had_error: bool,
+    event_writer: ?*EventWriter = null,
 
     pub fn init(allocator: std.mem.Allocator, lexer: *Lexer) Parser {
         var parser = Parser{
@@ -29,6 +31,10 @@ pub const Parser = struct {
         parser.nextToken();
 
         return parser;
+    }
+
+    pub fn setEventWriter(self: *Parser, ew: *EventWriter) void {
+        self.event_writer = ew;
     }
 
     fn nextToken(self: *Parser) void {
