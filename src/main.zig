@@ -60,10 +60,16 @@ pub fn main() !void {
             std.process.exit(1);
         };
 
-        type_checker.checkStmt(stmt, null) catch |err| {
-            std.debug.print("Type error: {}\n", .{err});
-            std.process.exit(1);
-        };
+        const type_check_result = type_checker.checkStmt(stmt, null);
+        switch (type_check_result) {
+            .ok => {},
+            .err => |err| {
+                const msg = try err.format(allocator);
+                defer allocator.free(msg);
+                std.debug.print("Type error: {s}\n", .{msg});
+                std.process.exit(1);
+            },
+        }
 
         // Check if it's an expression statement - if so, save the result
         switch (stmt.*) {

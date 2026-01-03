@@ -2,7 +2,7 @@ const std = @import("std");
 const ast = @import("../parser/ast.zig");
 const Function = @import("interpreter.zig").Function;
 
-pub const TypeCheckerError = error{ UndefinedVariable, InvalidType, TypeMismatch, RecursiveType, InfiniteLoop, UnexpectedEOF, UnexpectedToken, UndefinedFunction, ArgumentCountMismatch, VariableAlreadyDeclared, FunctionAlreadyDeclared, OutOfMemory };
+pub const TypeCheckerError = error{ UndefinedVariable, InvalidType, TypeMismatch, RecursiveType, InfiniteLoop, UnexpectedEOF, UnexpectedToken, UndefinedFunction, ArgumentCountMismatch, VariableAlreadyDeclared, FunctionAlreadyDeclared, OutOfMemory, UnexpectedReturnOutsideFunction };
 
 pub const Type = enum {
     Int,
@@ -46,22 +46,30 @@ pub const TypeChecker = struct {
         self.functions.deinit();
     }
 
-    pub fn inferExprType(self: *TypeChecker, expr: *const ast.Expr) TypeError!Type {
+    pub fn inferExprType(self: *TypeChecker, expr: *const ast.Expr) InferTypeResult {
         switch (expr.*) {
-            .int_literal => return Type.Int,
-            .string_literal => return Type.String,
-            .bool_literal => return Type.Bool,
+            .int_literal => return InferTypeResult{ .ok = Type.Int },
+            .string_literal => return InferTypeResult{ .ok = Type.String },
+            .bool_literal => return InferTypeResult{ .ok = Type.Bool },
             .identifier => |ident| {
                 if (self.environment.get(ident.name)) |ident_type| {
-                    return ident_type;
+                    return InferTypeResult{ .ok = ident_type };
                 }
-                return TypeError{ .kind = TypeCheckerError.UndefinedVariable, .name = ident.name };
+                return InferTypeResult{ .err = TypeError{ .kind = TypeCheckerError.UndefinedVariable, .name = ident.name } };
             },
             .binary => |bin| {
-                const left_type = try self.inferExprType(bin.left);
-                const right_type = try self.inferExprType(bin.right);
+                const left_result = self.inferExprType(bin.left);
+                const right_result = self.inferExprType(bin.right);
+                const left_type = switch (left_result) {
+                    .ok => |t| t,
+                    .err => |err| return InferTypeResult{ .err = err },
+                };
+                const right_type = switch (right_result) {
+                    .ok => |t| t,
+                    .err => |err| return InferTypeResult{ .err = err },
+                };
                 if (left_type != right_type) {
-                    return TypeError{ .kind = TypeCheckerError.TypeMismatch, .expected_type = left_type, .actual_type = right_type };
+                    return InferTypeResult{ .err = TypeError{ .kind = TypeCheckerError.TypeMismatch, .expected_type = left_type, .actual_type = right_type } };
                 }
 
                 const is_comparison = switch (bin.operator) {
@@ -70,124 +78,160 @@ pub const TypeChecker = struct {
                 };
 
                 if (is_comparison) {
-                    return Type.Bool;
+                    return InferTypeResult{ .ok = Type.Bool };
                 }
 
-                return left_type;
+                return InferTypeResult{ .ok = left_type };
             },
             .assignment => |assign| {
-                const value_type = try self.inferExprType(assign.value);
+                const value_infer_result = self.inferExprType(assign.value);
+                const value_type = switch (value_infer_result) {
+                    .ok => |t| t,
+                    .err => |err| return InferTypeResult{ .err = err },
+                };
                 if (self.environment.get(assign.name)) |assign_type| {
                     if (assign_type != value_type) {
-                        return TypeError{ .kind = TypeCheckerError.TypeMismatch, .expected_type = assign_type, .actual_type = value_type };
+                        return InferTypeResult{ .err = TypeError{ .kind = TypeCheckerError.TypeMismatch, .expected_type = assign_type, .actual_type = value_type } };
                     }
                 } else {
-                    return TypeError{ .kind = TypeCheckerError.UndefinedVariable, .name = assign.name };
+                    return InferTypeResult{ .err = TypeError{ .kind = TypeCheckerError.UndefinedVariable, .name = assign.name } };
                 }
-                return value_type;
+                return InferTypeResult{ .ok = value_type };
             },
             .call => |call| {
                 if (!self.functions.contains(call.name)) {
-                    return TypeError{ .kind = TypeCheckerError.UndefinedFunction, .name = call.name };
+                    return InferTypeResult{ .err = TypeError{ .kind = TypeCheckerError.UndefinedFunction, .name = call.name } };
                 }
 
                 const function = self.functions.getPtr(call.name).?;
                 if (function.parameters.len != call.arguments.len) {
-                    return TypeError{ .kind = TypeCheckerError.ArgumentCountMismatch };
+                    return InferTypeResult{ .err = TypeError{ .kind = TypeCheckerError.ArgumentCountMismatch } };
                 }
 
                 for (function.parameters, call.arguments) |param, arg| {
-                    const arg_type = try self.inferExprType(arg);
+                    const arg_infer_result = self.inferExprType(arg);
+                    const arg_type = switch (arg_infer_result) {
+                        .ok => |t| t,
+                        .err => |err| return InferTypeResult{ .err = err },
+                    };
                     if (param.type_annotation) |param_type_str| {
                         if (Type.fromString(param_type_str)) |param_type| {
                             if (param_type != arg_type) {
-                                return TypeError{ .kind = TypeCheckerError.TypeMismatch, .expected_type = param_type, .actual_type = arg_type };
+                                return InferTypeResult{ .err = TypeError{ .kind = TypeCheckerError.TypeMismatch, .expected_type = param_type, .actual_type = arg_type } };
                             }
+                            // return InferTypeResult{ .ok = param_type };
                         } else {
-                            return TypeError{ .kind = TypeCheckerError.InvalidType, .message = param_type_str };
+                            return InferTypeResult{ .err = TypeError{ .kind = TypeCheckerError.InvalidType, .message = param_type_str } };
                         }
                     } else {
-                        return TypeError{ .kind = TypeCheckerError.InvalidType };
+                        return InferTypeResult{ .err = TypeError{ .kind = TypeCheckerError.InvalidType } };
                     }
                 }
 
                 if (function.return_type) |return_type_str| {
                     if (Type.fromString(return_type_str)) |return_type| {
-                        return return_type;
+                        return InferTypeResult{ .ok = return_type };
                     } else {
-                        return TypeError{ .kind = TypeCheckerError.InvalidType };
+                        return InferTypeResult{ .err = TypeError{ .kind = TypeCheckerError.InvalidType } };
                     }
                 } else {
-                    return Type.Null;
+                    return InferTypeResult{ .ok = Type.Null };
                 }
             },
         }
     }
 
-    pub fn checkStmt(self: *TypeChecker, stmt: *ast.Stmt, expected_return_type: ?Type) TypeError!void {
+    pub fn checkStmt(self: *TypeChecker, stmt: *ast.Stmt, expected_return_type: ?Type) TypeCheckerResult {
         switch (stmt.*) {
             .const_decl => |const_decl| {
-                const value_type = try self.inferExprType(&const_decl.value);
+                const value_infer_result = self.inferExprType(&const_decl.value);
+                const value_type = switch (value_infer_result) {
+                    .ok => |t| t,
+                    .err => |err| return TypeCheckerResult{ .err = err },
+                };
 
                 if (const_decl.type_annotation) |type_annotation_str| {
                     if (Type.fromString(type_annotation_str)) |expected_type| {
                         if (expected_type != value_type) {
-                            return TypeError{ .kind = TypeCheckerError.TypeMismatch, .expected_type = expected_type, .actual_type = value_type };
+                            return TypeCheckerResult{ .err = TypeError{ .kind = TypeCheckerError.TypeMismatch, .expected_type = expected_type, .actual_type = value_type } };
                         }
+                        // return TypeCheckerResult.ok;
                     } else {
-                        return TypeError{ .kind = TypeCheckerError.InvalidType, .message = type_annotation_str };
+                        return TypeCheckerResult{ .err = TypeError{ .kind = TypeCheckerError.InvalidType, .message = type_annotation_str } };
                     }
                 }
 
                 if (self.environment.contains(const_decl.name)) {
-                    return TypeError{ .kind = TypeCheckerError.VariableAlreadyDeclared, .name = const_decl.name };
+                    return TypeCheckerResult{ .err = TypeError{ .kind = TypeCheckerError.VariableAlreadyDeclared, .name = const_decl.name } };
                 }
 
-                try self.environment.put(const_decl.name, value_type);
+                self.environment.put(const_decl.name, value_type) catch {
+                    return TypeCheckerResult{ .err = TypeError{ .kind = TypeCheckerError.OutOfMemory } };
+                };
+                return TypeCheckerResult.ok;
             },
             .var_decl => |var_decl| {
-                const value_type = try self.inferExprType(&var_decl.value);
+                const value_infer_result = self.inferExprType(&var_decl.value);
+                const value_type = switch (value_infer_result) {
+                    .ok => |t| t,
+                    .err => |err| return TypeCheckerResult{ .err = err },
+                };
 
                 if (var_decl.type_annotation) |type_annotation_str| {
                     if (Type.fromString(type_annotation_str)) |expected_type| {
                         if (expected_type != value_type) {
-                            return TypeError{ .kind = TypeCheckerError.TypeMismatch, .expected_type = expected_type, .actual_type = value_type };
+                            return TypeCheckerResult{ .err = TypeError{ .kind = TypeCheckerError.TypeMismatch, .expected_type = expected_type, .actual_type = value_type } };
                         }
+                        // return TypeCheckerResult.ok;
                     } else {
-                        return TypeError{ .kind = TypeCheckerError.InvalidType, .message = type_annotation_str };
+                        return TypeCheckerResult{ .err = TypeError{ .kind = TypeCheckerError.InvalidType, .message = type_annotation_str } };
                     }
                 }
 
                 if (self.environment.contains(var_decl.name)) {
-                    return TypeError{ .kind = TypeCheckerError.VariableAlreadyDeclared, .name = var_decl.name };
+                    return TypeCheckerResult{ .err = TypeError{ .kind = TypeCheckerError.VariableAlreadyDeclared, .name = var_decl.name } };
                 }
 
-                try self.environment.put(var_decl.name, value_type);
+                self.environment.put(var_decl.name, value_type) catch {
+                    return TypeCheckerResult{ .err = TypeError{ .kind = TypeCheckerError.OutOfMemory } };
+                };
+                return TypeCheckerResult.ok;
             },
             .expr_stmt => |expr_stmt| {
-                _ = try self.inferExprType(&expr_stmt.expr);
+                const expr_infer_result = self.inferExprType(&expr_stmt.expr);
+                switch (expr_infer_result) {
+                    .ok => return TypeCheckerResult.ok,
+                    .err => |err| return TypeCheckerResult{ .err = err },
+                }
             },
             .return_stmt => |return_stmt| {
                 if (expected_return_type) |expected_return| {
                     if (return_stmt.value) |value| {
                         const value_ptr = value;
-                        const value_type = try self.inferExprType(&value_ptr);
+                        const value_infer_result = self.inferExprType(&value_ptr);
+                        const value_type = switch (value_infer_result) {
+                            .ok => |t| t,
+                            .err => |err| return TypeCheckerResult{ .err = err },
+                        };
                         if (value_type != expected_return) {
-                            return TypeError{ .kind = TypeCheckerError.TypeMismatch, .expected_type = expected_return, .actual_type = value_type };
+                            return TypeCheckerResult{ .err = TypeError{ .kind = TypeCheckerError.TypeMismatch, .expected_type = expected_return, .actual_type = value_type } };
                         }
+                        return TypeCheckerResult.ok;
                     } else {
                         // return with no value
                         if (expected_return != Type.Null) {
-                            return TypeError{ .kind = TypeCheckerError.TypeMismatch, .expected_type = expected_return, .actual_type = Type.Null };
+                            return TypeCheckerResult{ .err = TypeError{ .kind = TypeCheckerError.TypeMismatch, .expected_type = expected_return, .actual_type = Type.Null } };
                         }
+                        return TypeCheckerResult.ok;
                     }
                 } else {
                     // return statement outside a func
+                    return TypeCheckerResult{ .err = TypeError{ .kind = TypeCheckerError.UnexpectedReturnOutsideFunction } };
                 }
             },
             .func_decl => |func_decl| {
                 if (self.functions.contains(func_decl.name)) {
-                    return TypeError{ .kind = TypeCheckerError.FunctionAlreadyDeclared, .name = func_decl.name };
+                    return TypeCheckerResult{ .err = TypeError{ .kind = TypeCheckerError.FunctionAlreadyDeclared, .name = func_decl.name } };
                 }
 
                 var return_type: ?Type = null;
@@ -195,7 +239,7 @@ pub const TypeChecker = struct {
                     if (Type.fromString(return_type_str)) |rt| {
                         return_type = rt;
                     } else {
-                        return TypeError{ .kind = TypeCheckerError.InvalidType, .message = return_type_str };
+                        return TypeCheckerResult{ .err = TypeError{ .kind = TypeCheckerError.InvalidType, .message = return_type_str } };
                     }
                 } else {
                     return_type = Type.Null; // no return type means return null / void
@@ -212,48 +256,70 @@ pub const TypeChecker = struct {
                     if (param.type_annotation) |param_type_str| {
                         if (Type.fromString(param_type_str)) |param_type| {
                             if (func_env.contains(param.name)) {
-                                return TypeError{ .kind = TypeCheckerError.VariableAlreadyDeclared, .name = param.name };
+                                return TypeCheckerResult{ .err = TypeError{ .kind = TypeCheckerError.VariableAlreadyDeclared, .name = param.name } };
                             }
-                            try func_env.put(param.name, param_type);
+                            func_env.put(param.name, param_type) catch {
+                                return TypeCheckerResult{ .err = TypeError{ .kind = TypeCheckerError.OutOfMemory } };
+                            };
                         } else {
-                            return TypeError{ .kind = TypeCheckerError.InvalidType, .message = param_type_str };
+                            return TypeCheckerResult{ .err = TypeError{ .kind = TypeCheckerError.InvalidType, .message = param_type_str } };
                         }
                     } else {
-                        return TypeError{ .kind = TypeCheckerError.InvalidType };
+                        return TypeCheckerResult{ .err = TypeError{ .kind = TypeCheckerError.InvalidType } };
                     }
                 }
 
                 self.environment = func_env;
 
                 for (func_decl.body) |body_stmt| {
-                    try self.checkStmt(body_stmt, return_type);
+                    const check_result = self.checkStmt(body_stmt, return_type);
+                    switch (check_result) {
+                        .ok => {},
+                        .err => |err| return TypeCheckerResult{ .err = err },
+                    }
                 }
 
                 self.environment = old_env;
 
-                try self.functions.put(func_decl.name, Function{
+                self.functions.put(func_decl.name, Function{
                     .parameters = func_decl.parameters,
                     .return_type = func_decl.return_type,
                     .body = func_decl.body,
-                });
+                }) catch {
+                    return TypeCheckerResult{ .err = TypeError{ .kind = TypeCheckerError.OutOfMemory } };
+                };
+                return TypeCheckerResult.ok;
             },
             .if_stmt => |if_stmt| {
-                const condition_type = try self.inferExprType(&if_stmt.condition);
+                const condition_infer_result = self.inferExprType(&if_stmt.condition);
+                const condition_type = switch (condition_infer_result) {
+                    .ok => |t| t,
+                    .err => |err| return TypeCheckerResult{ .err = err },
+                };
                 if (condition_type != Type.Bool) {
-                    return TypeError{ .kind = TypeCheckerError.TypeMismatch, .expected_type = Type.Bool, .actual_type = condition_type }; // Condition must be boolean
+                    return TypeCheckerResult{ .err = TypeError{ .kind = TypeCheckerError.TypeMismatch, .expected_type = Type.Bool, .actual_type = condition_type } }; // Condition must be boolean
                 }
 
                 // Check then branch
                 for (if_stmt.then_branch) |then_stmt| {
-                    try self.checkStmt(then_stmt, expected_return_type);
+                    const check_result = self.checkStmt(then_stmt, expected_return_type);
+                    switch (check_result) {
+                        .ok => {},
+                        .err => |err| return TypeCheckerResult{ .err = err },
+                    }
                 }
 
                 // Check else branch if it exists
                 if (if_stmt.else_branch) |else_branch| {
                     for (else_branch) |else_stmt| {
-                        try self.checkStmt(else_stmt, expected_return_type);
+                        const check_result = self.checkStmt(else_stmt, expected_return_type);
+                        switch (check_result) {
+                            .ok => {},
+                            .err => |err| return TypeCheckerResult{ .err = err },
+                        }
                     }
                 }
+                return TypeCheckerResult.ok;
             },
         }
     }
@@ -272,13 +338,13 @@ pub const TypeError = struct {
                 if (self.expected_type) |expected_type| {
                     if (self.actual_type) |actual_type| {
                         if (self.name) |name| {
-                            return try std.fmt.allocPrint(allocator, "Type mismatch for '{s}': expected '{}', got '{}'", .{ name, expected_type.toString(), actual_type.toString() });
+                            return try std.fmt.allocPrint(allocator, "Type mismatch for '{s}': expected '{s}', got '{s}'", .{ name, expected_type.toString(), actual_type.toString() });
                         } else {
-                            return try std.fmt.allocPrint(allocator, "Type mismatch: expected '{}', got '{}'", .{ expected_type.toString(), actual_type.toString() });
+                            return try std.fmt.allocPrint(allocator, "Type mismatch: expected '{s}', got '{s}'", .{ expected_type.toString(), actual_type.toString() });
                         }
                     }
                 }
-                return try std.fmt.allocPrint(allocator, "Type mismatch");
+                return try std.fmt.allocPrint(allocator, "Type mismatch", .{});
             },
             TypeCheckerError.UndefinedVariable => {
                 if (self.name) |name| {
@@ -313,7 +379,20 @@ pub const TypeError = struct {
                 }
                 return try std.fmt.allocPrint(allocator, "Invalid type", .{});
             },
-            else => try std.fmt.allocPrint(allocator, "Unknown type error"),
+            TypeCheckerError.UnexpectedReturnOutsideFunction => {
+                return try std.fmt.allocPrint(allocator, "Unexpected return outside function", .{});
+            },
+            else => return try std.fmt.allocPrint(allocator, "Unknown type error", .{}),
         }
     }
+};
+
+pub const TypeCheckerResult = union(enum) {
+    ok: void, // success
+    err: TypeError, // error
+};
+
+pub const InferTypeResult = union(enum) {
+    ok: Type, // Success case - carries the Type
+    err: TypeError, // Error case
 };
